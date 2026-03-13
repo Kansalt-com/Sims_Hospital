@@ -66,9 +66,9 @@ export const VisitsPage = () => {
         }}
         onRetry={() => load(query)}
         onChangeStatus={changeStatus}
-        onCreateBill={(visitId) => navigate(`/invoices?visitId=${visitId}`)}
-        onPrintBill={(invoiceId) => navigate(`/invoices/${invoiceId}/print`)}
-        onPrescription={(visitId) => navigate(`/prescriptions/${visitId}/print`)}
+        onCreateBill={(visitId) => navigate(`/invoices?visitId=${visitId}`, { state: { backTo: "/visits" } })}
+        onPrintBill={(invoiceId) => navigate(`/invoices/${invoiceId}/print`, { state: { backTo: "/visits" } })}
+        onPrescription={(visitId) => navigate(`/prescriptions/${visitId}/print`, { state: { backTo: "/visits" } })}
         onAdmitToIpd={openTransfer}
       />
 

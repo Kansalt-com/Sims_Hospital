@@ -1,5 +1,4 @@
 import { HospitalBrand } from "../branding/HospitalBrand";
-import { PoweredByKansalt } from "../branding/PoweredByKansalt";
 
 type PrintHeaderProps = {
   hospitalName?: string;
@@ -35,7 +34,6 @@ export const PrintHeader = ({
       </div>
 
       <div className="print-brand-header__provider">
-        <PoweredByKansalt stacked className="print-brand-header__powered-by" />
         {(metaLabel || metaValue || metaText) ? (
           <div className="invoice-sheet__meta">
             {metaLabel ? <p className="invoice-sheet__meta-label">{metaLabel}</p> : null}

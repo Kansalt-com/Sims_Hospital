@@ -1,4 +1,4 @@
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
@@ -8,8 +8,10 @@ import { PaymentModal } from "./PaymentModal";
 import { useInvoices } from "./useInvoices";
 
 export const InvoicesPage = () => {
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const presetVisitId = searchParams.get("visitId") || "";
+  const backTo = (location.state as { backTo?: string } | null)?.backTo;
   const {
     loading,
     saving,
@@ -46,6 +48,13 @@ export const InvoicesPage = () => {
       <div>
         <h1 className="text-2xl font-semibold">Billing Desk</h1>
         <p className="text-sm text-slate-500">A simplified hospital billing screen designed for reception and billing staff.</p>
+        {backTo ? (
+          <div className="mt-3">
+            <Link to={backTo}>
+              <Button variant="secondary">Back</Button>
+            </Link>
+          </div>
+        ) : null}
       </div>
 
       <InvoiceBillingForm
@@ -77,11 +86,11 @@ export const InvoicesPage = () => {
           <h3 className="text-lg font-semibold text-emerald-800">Invoice generated successfully</h3>
           <p className="mt-1 text-sm text-emerald-700">Invoice created for visit #{lastCreated.visitId}. Print is ready.</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Link to={`/invoices/${lastCreated.invoiceId}/print`}>
+            <Link to={`/invoices/${lastCreated.invoiceId}/print`} state={{ backTo: backTo || `${location.pathname}${location.search}` }}>
               <Button>Print Invoice</Button>
             </Link>
             {lastCreated.dueAmount <= 0 ? (
-              <Link to={`/prescriptions/${lastCreated.visitId}/print`}>
+              <Link to={`/prescriptions/${lastCreated.visitId}/print`} state={{ backTo: backTo || `${location.pathname}${location.search}` }}>
                 <Button variant="secondary">Print Prescription</Button>
               </Link>
             ) : (

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "../../api/client";
 import { userApi } from "../../api/services";
@@ -7,12 +7,22 @@ import { Card } from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
 import { Loader } from "../../components/ui/Loader";
 import { Select } from "../../components/ui/Select";
+import { useAuth } from "../../context/AuthContext";
+import type { User } from "../../types";
 import { formatDateTime } from "../../utils/format";
 
+type ManagedUser = User & {
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export const AdminUsersPage = () => {
-  const [users, setUsers] = useState<any[]>([]);
+  const { user: currentUser } = useAuth();
+  const [users, setUsers] = useState<ManagedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [form, setForm] = useState({
     name: "",
     username: "",
@@ -20,11 +30,13 @@ export const AdminUsersPage = () => {
     password: "",
   });
 
+  const adminCount = useMemo(() => users.filter((user) => user.role === "ADMIN").length, [users]);
+
   const load = async () => {
     setLoading(true);
     try {
       const res = await userApi.list();
-      setUsers(res.data.data);
+      setUsers(res.data.data as ManagedUser[]);
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -40,10 +52,10 @@ export const AdminUsersPage = () => {
     event.preventDefault();
     setSaving(true);
     try {
-      await userApi.create(form);
+      const res = await userApi.create(form);
+      setUsers((prev) => [res.data.data as ManagedUser, ...prev]);
       toast.success("User created");
       setForm({ name: "", username: "", role: "RECEPTION", password: "" });
-      await load();
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -51,17 +63,17 @@ export const AdminUsersPage = () => {
     }
   };
 
-  const toggleActive = async (user: any) => {
+  const toggleActive = async (user: ManagedUser) => {
     try {
-      await userApi.update(user.id, { active: !user.active });
+      const res = await userApi.update(user.id, { active: !user.active });
+      setUsers((prev) => prev.map((row) => (row.id === user.id ? { ...row, ...(res.data.data as Partial<ManagedUser>) } : row)));
       toast.success(`User ${user.active ? "disabled" : "enabled"}`);
-      await load();
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
   };
 
-  const resetPassword = async (user: any) => {
+  const resetPassword = async (user: ManagedUser) => {
     const password = prompt(`Set new password for ${user.username}`);
     if (!password) return;
 
@@ -70,6 +82,28 @@ export const AdminUsersPage = () => {
       toast.success("Password reset done. User must change it at next login.");
     } catch (error) {
       toast.error(getErrorMessage(error));
+    }
+  };
+
+  const deleteUser = async (user: ManagedUser) => {
+    if (user.role === "ADMIN" && adminCount <= 1) {
+      toast.error("The last admin cannot be deleted.");
+      return;
+    }
+
+    if (!window.confirm(`Delete user ${user.username}? This action cannot be undone.`)) {
+      return;
+    }
+
+    setDeletingId(user.id);
+    try {
+      await userApi.remove(user.id);
+      setUsers((prev) => prev.filter((row) => row.id !== user.id));
+      toast.success("User deleted");
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -135,25 +169,41 @@ export const AdminUsersPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {users.map((user) => (
-                  <tr key={user.id} className="border-b border-slate-100">
-                    <td className="py-3">{user.name}</td>
-                    <td className="py-3">{user.username}</td>
-                    <td className="py-3">{user.role}</td>
-                    <td className="py-3">{user.active ? "Yes" : "No"}</td>
-                    <td className="py-3">{formatDateTime(user.createdAt)}</td>
-                    <td className="py-3">
-                      <div className="flex gap-2">
-                        <Button variant="secondary" className="h-8 px-3 py-1 text-xs" onClick={() => toggleActive(user)}>
-                          {user.active ? "Disable" : "Enable"}
-                        </Button>
-                        <Button variant="ghost" className="h-8 px-3 py-1 text-xs" onClick={() => resetPassword(user)}>
-                          Reset Password
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {users.map((user) => {
+                  const deleting = deletingId === user.id;
+                  const deletingLastAdmin = user.role === "ADMIN" && adminCount <= 1;
+
+                  return (
+                    <tr key={user.id} className="border-b border-slate-100">
+                      <td className="py-3">
+                        <p className="font-medium text-slate-900">{user.name}</p>
+                        {currentUser?.id === user.id ? <p className="text-xs text-slate-500">Current session</p> : null}
+                      </td>
+                      <td className="py-3">{user.username}</td>
+                      <td className="py-3">{user.role}</td>
+                      <td className="py-3">{user.active ? "Yes" : "No"}</td>
+                      <td className="py-3">{formatDateTime(user.createdAt)}</td>
+                      <td className="py-3">
+                        <div className="flex flex-wrap gap-2">
+                          <Button variant="secondary" className="h-9 px-3 py-1 text-xs" onClick={() => toggleActive(user)}>
+                            {user.active ? "Disable" : "Enable"}
+                          </Button>
+                          <Button variant="ghost" className="h-9 px-3 py-1 text-xs" onClick={() => resetPassword(user)}>
+                            Reset Password
+                          </Button>
+                          <Button
+                            variant="danger"
+                            className="h-9 px-3 py-1 text-xs"
+                            disabled={deleting || deletingLastAdmin}
+                            onClick={() => deleteUser(user)}
+                          >
+                            {deleting ? "Deleting..." : "Delete"}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

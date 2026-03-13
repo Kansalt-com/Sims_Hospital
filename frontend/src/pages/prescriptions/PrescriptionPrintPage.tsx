@@ -1,12 +1,10 @@
 ﻿import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "../../api/client";
 import { prescriptionApi, settingsApi, visitApi } from "../../api/services";
 import type { HospitalSettings, Visit } from "../../types";
 import { HospitalBrand } from "../../components/branding/HospitalBrand";
-import { PoweredByKansalt } from "../../components/branding/PoweredByKansalt";
-import { PrintFooter } from "../../components/print/PrintFooter";
 import { Button } from "../../components/ui/Button";
 import { Loader } from "../../components/ui/Loader";
 import { formatDateTime } from "../../utils/format";
@@ -24,8 +22,10 @@ const fieldOrBlank = (value: unknown) => {
 };
 
 export const PrescriptionPrintPage = () => {
+  const location = useLocation();
   const params = useParams();
   const visitId = Number(params.visitId);
+  const backTo = (location.state as { backTo?: string } | null)?.backTo ?? "/prescriptions";
   const [loading, setLoading] = useState(true);
   const [visit, setVisit] = useState<PrescriptionVisit | null>(null);
   const [settings, setSettings] = useState<HospitalSettings | null>(null);
@@ -103,7 +103,7 @@ export const PrescriptionPrintPage = () => {
         </div>
         <div className="flex gap-2">
           <Button onClick={() => window.print()}>Print Prescription</Button>
-          <Link to="/prescriptions"><Button variant="secondary">Back</Button></Link>
+          <Link to={backTo}><Button variant="secondary">Back</Button></Link>
         </div>
       </div>
 
@@ -124,7 +124,6 @@ export const PrescriptionPrintPage = () => {
             </div>
           </div>
           <div className="prescription-doctor-block">
-            <PoweredByKansalt stacked className="prescription-powered-by" />
             <p className="prescription-doctor-name">Dr. {visit.doctor.name}</p>
             <p>{visit.doctor?.doctorProfile?.qualification || ""}</p>
             <p>{visit.doctor?.doctorProfile?.specialization || ""}</p>
@@ -162,7 +161,13 @@ export const PrescriptionPrintPage = () => {
         <div className="prescription-footer-row">
           <p className="visit-meta">Visit: #{visit.id} | Bill ID: {visit.invoice.invoiceNo} | {formatDateTime(visit.scheduledAt)}</p>
         </div>
-        <PrintFooter note={settings.footerNote} signatureLabel="Doctor Signature" />
+        <footer className="prescription-sheet__footer">
+          <p className="prescription-sheet__thank-you">{settings.footerNote || "Thank you for choosing SIMS Hospital."}</p>
+          <div className="prescription-sheet__signature">
+            <div className="invoice-sheet__signature-line" />
+            <p>Doctor Signature</p>
+          </div>
+        </footer>
       </article>
     </div>
   );

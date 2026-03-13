@@ -68,7 +68,7 @@ export const DashboardPage = () => {
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-[32px] bg-[linear-gradient(135deg,#0f172a,_#155e75,_#0f766e)] p-8 text-white shadow-2xl shadow-cyan-900/15">
+      <section className="min-h-[220px] overflow-hidden rounded-[32px] bg-[linear-gradient(135deg,#0f172a,_#155e75,_#0f766e)] p-8 text-white shadow-2xl shadow-cyan-900/15">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-sm uppercase tracking-[0.26em] text-cyan-100">Enterprise Operations</p>

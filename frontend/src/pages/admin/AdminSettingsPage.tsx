@@ -29,10 +29,8 @@ export const AdminSettingsPage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [uploadingKansalt, setUploadingKansalt] = useState(false);
   const [settings, setSettings] = useState<HospitalSettings | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [kansaltPreview, setKansaltPreview] = useState<string | null>(null);
   const [errors, setErrors] = useState(emptyErrors);
   const [form, setForm] = useState({
     hospitalName: "",
@@ -43,10 +41,8 @@ export const AdminSettingsPage = () => {
     invoicePrefix: "SIMS",
     invoiceSequence: "1",
     footerNote: "",
-    kansaltLogoPath: "",
   });
   const logoInputRef = useRef<HTMLInputElement | null>(null);
-  const kansaltInputRef = useRef<HTMLInputElement | null>(null);
 
   const applySettings = (data: HospitalSettings) => {
     setSettings(data);
@@ -59,10 +55,8 @@ export const AdminSettingsPage = () => {
       invoicePrefix: data.invoicePrefix,
       invoiceSequence: String(data.invoiceSequence || 1),
       footerNote: data.footerNote || "",
-      kansaltLogoPath: data.kansaltLogoPath || "",
     });
     setLogoPreview(buildAssetUrl(data.logoPath, data.updatedAt ?? Date.now()));
-    setKansaltPreview(buildAssetUrl(data.kansaltLogoPath, data.updatedAt ?? Date.now()));
   };
 
   const broadcastBranding = (data: HospitalSettings) => {
@@ -117,7 +111,6 @@ export const AdminSettingsPage = () => {
         invoicePrefix: form.invoicePrefix.trim().toUpperCase(),
         invoiceSequence: Number(form.invoiceSequence || 1),
         footerNote: form.footerNote.trim() || null,
-        kansaltLogoPath: form.kansaltLogoPath.trim() || null,
       });
       applySettings(res.data.data);
       broadcastBranding(res.data.data);
@@ -141,7 +134,7 @@ export const AdminSettingsPage = () => {
     return true;
   };
 
-  const uploadLogo = async (event: React.ChangeEvent<HTMLInputElement>, type: "hospital" | "kansalt") => {
+  const uploadLogo = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !validateUpload(file)) {
       event.target.value = "";
@@ -149,19 +142,14 @@ export const AdminSettingsPage = () => {
     }
 
     const localPreview = URL.createObjectURL(file);
-    if (type === "hospital") {
-      setLogoPreview(localPreview);
-      setUploading(true);
-    } else {
-      setKansaltPreview(localPreview);
-      setUploadingKansalt(true);
-    }
+    setLogoPreview(localPreview);
+    setUploading(true);
 
     try {
-      const res = type === "hospital" ? await settingsApi.uploadLogo(file) : await settingsApi.uploadKansaltLogo(file);
+      const res = await settingsApi.uploadLogo(file);
       applySettings(res.data.data);
       broadcastBranding(res.data.data);
-      toast.success(type === "hospital" ? "Hospital logo uploaded" : "Kansalt logo uploaded");
+      toast.success("Hospital logo uploaded");
     } catch (error) {
       toast.error(getErrorMessage(error));
       if (settings) {
@@ -169,11 +157,7 @@ export const AdminSettingsPage = () => {
       }
     } finally {
       URL.revokeObjectURL(localPreview);
-      if (type === "hospital") {
-        setUploading(false);
-      } else {
-        setUploadingKansalt(false);
-      }
+      setUploading(false);
       event.target.value = "";
     }
   };
@@ -181,11 +165,6 @@ export const AdminSettingsPage = () => {
   const hospitalLogoStatus = useMemo(
     () => (uploading ? "Uploading hospital logo..." : logoPreview ? "Hospital logo active" : "No hospital logo uploaded"),
     [logoPreview, uploading],
-  );
-
-  const kansaltLogoStatus = useMemo(
-    () => (uploadingKansalt ? "Uploading footer logo..." : kansaltPreview ? "Footer logo active" : "No footer logo uploaded"),
-    [kansaltPreview, uploadingKansalt],
   );
 
   if (loading) {
@@ -196,7 +175,7 @@ export const AdminSettingsPage = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Hospital Settings</h1>
-        <p className="text-sm text-slate-500">Manage organization details, invoice numbering, and branding assets used across the application and print layouts.</p>
+        <p className="text-sm text-slate-500">Manage organization details, invoice numbering, and the hospital logo used across the application and print layouts.</p>
       </div>
 
       <Card>
@@ -234,7 +213,7 @@ export const AdminSettingsPage = () => {
           <p className="mt-1 text-sm text-slate-500">Accepted formats: {formatAcceptedImageTypes()}. Maximum file size: 3 MB.</p>
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-2">
+        <div className="grid gap-5">
           <FormSection title="Hospital Logo" description="Used in the app header, invoices, and prescription print layouts.">
             <div className="flex flex-col gap-4">
               <div className="flex h-40 items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white">
@@ -256,7 +235,7 @@ export const AdminSettingsPage = () => {
                 )}
               </div>
               <div className="flex flex-wrap gap-3">
-                <input ref={logoInputRef} type="file" accept=".png,.jpg,.jpeg,.svg,image/png,image/jpeg,image/svg+xml" className="hidden" onChange={(event) => uploadLogo(event, "hospital")} />
+                <input ref={logoInputRef} type="file" accept=".png,.jpg,.jpeg,.svg,image/png,image/jpeg,image/svg+xml" className="hidden" onChange={uploadLogo} />
                 <Button variant="secondary" onClick={() => logoInputRef.current?.click()} disabled={uploading}>
                   {uploading ? "Uploading..." : "Upload Hospital Logo"}
                 </Button>
@@ -264,34 +243,7 @@ export const AdminSettingsPage = () => {
               <p className="text-xs text-slate-500">{hospitalLogoStatus}</p>
             </div>
           </FormSection>
-
-          <FormSection title="Footer Logo" description="Used in the application footer and can be preserved separately from the hospital brand.">
-            <div className="flex flex-col gap-4">
-              <div className="flex h-40 items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white">
-                {kansaltPreview ? (
-                  <img src={kansaltPreview} alt="Footer logo preview" className="max-h-20 max-w-full object-contain" />
-                ) : (
-                  <div className="text-center text-sm text-slate-500">
-                    <p className="font-medium text-slate-700">No footer logo uploaded</p>
-                    <p>The footer will fall back to text only.</p>
-                  </div>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <input ref={kansaltInputRef} type="file" accept=".png,.jpg,.jpeg,.svg,image/png,image/jpeg,image/svg+xml" className="hidden" onChange={(event) => uploadLogo(event, "kansalt")} />
-                <Button variant="secondary" onClick={() => kansaltInputRef.current?.click()} disabled={uploadingKansalt}>
-                  {uploadingKansalt ? "Uploading..." : "Upload Footer Logo"}
-                </Button>
-              </div>
-              <p className="text-xs text-slate-500">{kansaltLogoStatus}</p>
-            </div>
-          </FormSection>
         </div>
-      </Card>
-
-      <Card>
-        <h2 className="mb-3 text-lg font-semibold">Backup Reminder</h2>
-        <p className="text-sm text-slate-600">Back up `%APPDATA%\\SIMS Hospital\\data\\sims.db` and `%APPDATA%\\SIMS Hospital\\uploads\\` regularly to protect billing records and branding assets.</p>
       </Card>
     </div>
   );

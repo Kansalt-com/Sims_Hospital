@@ -6,23 +6,29 @@ import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
 import { Loader } from "../../components/ui/Loader";
+import type { DoctorProfile, User } from "../../types";
+
+type DoctorRow = User & {
+  active: boolean;
+  doctorProfile?: DoctorProfile | null;
+};
 
 const emptyForm = {
   fullName: "",
   qualification: "",
   specialization: "",
+  experienceYears: "0",
   registrationNumber: "",
   phone: "",
   email: "",
   username: "",
   password: "",
-  active: true,
 };
 
 export const DoctorsPage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [rows, setRows] = useState<any[]>([]);
+  const [rows, setRows] = useState<DoctorRow[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [query, setQuery] = useState("");
   const [form, setForm] = useState(emptyForm);
@@ -31,7 +37,7 @@ export const DoctorsPage = () => {
     setLoading(true);
     try {
       const res = await doctorApi.list({ q: search });
-      setRows(res.data.data);
+      setRows(res.data.data as DoctorRow[]);
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -43,32 +49,37 @@ export const DoctorsPage = () => {
     load();
   }, []);
 
+  const resetForm = () => {
+    setForm(emptyForm);
+    setEditingId(null);
+  };
+
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setSaving(true);
 
     try {
+      const payload = {
+        ...form,
+        experienceYears: Number(form.experienceYears || 0),
+        registrationNumber: form.registrationNumber || null,
+        phone: form.phone || null,
+        email: form.email || null,
+        password: form.password || undefined,
+      };
+
       if (editingId) {
-        await doctorApi.update(editingId, {
-          ...form,
-          registrationNumber: form.registrationNumber || null,
-          phone: form.phone || null,
-          email: form.email || null,
-          password: form.password || undefined,
-        });
+        await doctorApi.update(editingId, payload);
         toast.success("Doctor updated");
       } else {
         await doctorApi.create({
-          ...form,
-          registrationNumber: form.registrationNumber || null,
-          phone: form.phone || null,
-          email: form.email || null,
+          ...payload,
+          password: form.password,
         });
         toast.success("Doctor added");
       }
 
-      setForm(emptyForm);
-      setEditingId(null);
+      resetForm();
       await load();
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -77,22 +88,22 @@ export const DoctorsPage = () => {
     }
   };
 
-  const startEdit = (row: any) => {
+  const startEdit = (row: DoctorRow) => {
     setEditingId(row.id);
     setForm({
       fullName: row.name || "",
       qualification: row.doctorProfile?.qualification || "",
       specialization: row.doctorProfile?.specialization || "",
+      experienceYears: String(row.doctorProfile?.experienceYears ?? 0),
       registrationNumber: row.doctorProfile?.registrationNumber || "",
       phone: row.doctorProfile?.phone || "",
       email: row.doctorProfile?.email || "",
       username: row.username || "",
       password: "",
-      active: Boolean(row.active),
     });
   };
 
-  const toggleStatus = async (row: any) => {
+  const toggleStatus = async (row: DoctorRow) => {
     try {
       await doctorApi.update(row.id, { active: !row.active });
       toast.success(row.active ? "Doctor disabled" : "Doctor enabled");
@@ -102,7 +113,7 @@ export const DoctorsPage = () => {
     }
   };
 
-  const uploadSignature = async (row: any, file: File) => {
+  const uploadSignature = async (row: DoctorRow, file: File) => {
     try {
       await doctorApi.uploadSignature(row.id, file);
       toast.success("Signature uploaded");
@@ -125,19 +136,24 @@ export const DoctorsPage = () => {
           <Input label="Full Name" value={form.fullName} onChange={(e) => setForm((p) => ({ ...p, fullName: e.target.value }))} required />
           <Input label="Qualification" value={form.qualification} onChange={(e) => setForm((p) => ({ ...p, qualification: e.target.value }))} required />
           <Input label="Specialization" value={form.specialization} onChange={(e) => setForm((p) => ({ ...p, specialization: e.target.value }))} required />
+          <Input
+            label="Experience (years)"
+            type="number"
+            min={0}
+            inputMode="numeric"
+            value={form.experienceYears}
+            onChange={(e) => setForm((p) => ({ ...p, experienceYears: e.target.value }))}
+            required
+          />
           <Input label="License No. (optional)" value={form.registrationNumber} onChange={(e) => setForm((p) => ({ ...p, registrationNumber: e.target.value }))} />
           <Input label="Phone" value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} />
           <Input label="Email" type="email" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} />
           <Input label="Username" value={form.username} onChange={(e) => setForm((p) => ({ ...p, username: e.target.value }))} required />
           <Input label={editingId ? "New Password (optional)" : "Password"} type="password" value={form.password} onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))} required={!editingId} />
-          <label className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm">
-            <input type="checkbox" checked={form.active} onChange={(e) => setForm((p) => ({ ...p, active: e.target.checked }))} />
-            Active
-          </label>
 
-          <div className="md:col-span-3 flex gap-2">
+          <div className="md:col-span-3 flex flex-wrap gap-2">
             <Button type="submit" disabled={saving}>{saving ? "Saving..." : editingId ? "Update Doctor" : "Add Doctor"}</Button>
-            {editingId ? <Button variant="secondary" type="button" onClick={() => { setEditingId(null); setForm(emptyForm); }}>Cancel</Button> : null}
+            <Button variant="secondary" type="button" onClick={resetForm}>Reset</Button>
           </div>
         </form>
       </Card>
@@ -157,6 +173,7 @@ export const DoctorsPage = () => {
                   <th className="py-2">Name</th>
                   <th className="py-2">Qualification</th>
                   <th className="py-2">Specialization</th>
+                  <th className="py-2">Experience</th>
                   <th className="py-2">Phone</th>
                   <th className="py-2">Status</th>
                   <th className="py-2">Actions</th>
@@ -171,18 +188,19 @@ export const DoctorsPage = () => {
                     </td>
                     <td className="py-3">{row.doctorProfile?.qualification || "-"}</td>
                     <td className="py-3">{row.doctorProfile?.specialization || "-"}</td>
+                    <td className="py-3">{row.doctorProfile?.experienceYears ?? 0} years</td>
                     <td className="py-3">{row.doctorProfile?.phone || "-"}</td>
                     <td className="py-3">{row.active ? "Active" : "Inactive"}</td>
                     <td className="py-3">
                       <div className="flex flex-wrap gap-2">
-                        <Button variant="ghost" className="h-8 px-3 py-1 text-xs" onClick={() => startEdit(row)}>Edit</Button>
-                        <Button variant="secondary" className="h-8 px-3 py-1 text-xs" onClick={() => toggleStatus(row)}>{row.active ? "Disable" : "Enable"}</Button>
-                        <label className="inline-flex cursor-pointer items-center rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50">
-                          Signature
+                        <Button variant="ghost" className="h-9 px-3 py-1 text-xs" onClick={() => startEdit(row)}>Edit</Button>
+                        <Button variant="secondary" className="h-9 px-3 py-1 text-xs" onClick={() => toggleStatus(row)}>{row.active ? "Disable" : "Enable"}</Button>
+                        <label className="inline-flex min-h-[38px] cursor-pointer items-center justify-center rounded-[6px] border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:-translate-y-px hover:border-slate-300 hover:bg-slate-50">
+                          Upload Signature
                           <input
                             type="file"
                             className="hidden"
-                            accept="image/*"
+                            accept=".png,.jpg,.jpeg,image/png,image/jpeg"
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) uploadSignature(row, file);

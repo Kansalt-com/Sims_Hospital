@@ -29,6 +29,7 @@ export const createAdmissionSchema = z.object({
 
 export const updateAdmissionSchema = z.object({
   attendingDoctorId: z.number().int().positive().optional(),
+  status: z.enum(IPD_ADMISSION_STATUSES).optional(),
   roomId: z.number().int().positive().optional().nullable(),
   bedId: z.number().int().positive().optional().nullable(),
   ward: z.string().min(1).max(120).optional(),
@@ -39,7 +40,6 @@ export const updateAdmissionSchema = z.object({
 });
 
 export const dischargeSchema = z.object({
-  dischargeNote: z.string().max(5000).optional(),
   dischargedAt: z.string().datetime().optional(),
 });
 

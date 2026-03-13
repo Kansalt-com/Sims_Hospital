@@ -9,15 +9,15 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { Input } from "../../components/ui/Input";
 import { Loader } from "../../components/ui/Loader";
 import { Select } from "../../components/ui/Select";
-import type { Room } from "../../types";
+import type { IPDAdmission, Patient, Room, User } from "../../types";
 import { formatDateTime } from "../../utils/format";
 
 export const IpdPage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [rows, setRows] = useState<any[]>([]);
-  const [patients, setPatients] = useState<any[]>([]);
-  const [doctors, setDoctors] = useState<any[]>([]);
+  const [rows, setRows] = useState<IPDAdmission[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [doctors, setDoctors] = useState<Array<User & { active?: boolean }>>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -102,11 +102,15 @@ export const IpdPage = () => {
     }
   };
 
-  const discharge = async (row: any) => {
-    const note = prompt("Discharge note (optional)") || undefined;
+  const updateStatus = async (row: IPDAdmission, status: IPDAdmission["status"]) => {
     try {
-      await ipdApi.discharge(row.id, { dischargeNote: note });
-      toast.success("Patient discharged");
+      if (status === "DISCHARGED") {
+        await ipdApi.discharge(row.id);
+        toast.success("Patient discharged");
+      } else {
+        await ipdApi.update(row.id, { status });
+        toast.success("IPD status updated");
+      }
       await load();
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -157,6 +161,8 @@ export const IpdPage = () => {
           <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="">All status</option>
             <option value="ADMITTED">Admitted</option>
+            <option value="UNDER_TREATMENT">Under Treatment</option>
+            <option value="RECOVERED">Recovered</option>
             <option value="DISCHARGED">Discharged</option>
           </Select>
           <Button onClick={load}>Apply</Button>
@@ -194,13 +200,23 @@ export const IpdPage = () => {
                       )}
                     </td>
                     <td className="py-3">
-                      <Badge tone={row.status === "DISCHARGED" ? "success" : "warning"}>{row.status}</Badge>
+                      <Select
+                        value={row.status}
+                        disabled={row.status === "DISCHARGED"}
+                        onChange={(event) => updateStatus(row, event.target.value as IPDAdmission["status"])}
+                        className="min-w-[180px]"
+                      >
+                        <option value="ADMITTED">Admitted</option>
+                        <option value="UNDER_TREATMENT">Under Treatment</option>
+                        <option value="RECOVERED">Recovered</option>
+                        <option value="DISCHARGED">Discharged</option>
+                      </Select>
                     </td>
                     <td className="py-3">
-                      {row.status === "ADMITTED" ? (
-                        <Button className="h-8 px-3 py-1 text-xs" variant="secondary" onClick={() => discharge(row)}>Discharge</Button>
-                      ) : (
+                      {row.status === "DISCHARGED" ? (
                         <span className="text-xs text-slate-500">Discharged {row.dischargedAt ? formatDateTime(row.dischargedAt) : ""}</span>
+                      ) : (
+                        <Badge tone={row.status === "RECOVERED" ? "success" : "warning"}>{row.status.split("_").join(" ")}</Badge>
                       )}
                     </td>
                   </tr>

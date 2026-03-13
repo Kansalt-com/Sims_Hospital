@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
@@ -31,6 +31,9 @@ export const InvoiceListTable = ({
   onRetry,
   onCollectPayment,
 }: InvoiceListTableProps) => {
+  const location = useLocation();
+  const backTo = `${location.pathname}${location.search}`;
+
   return (
     <Card>
       <div className="mb-4 flex flex-wrap gap-3">
@@ -90,11 +93,11 @@ export const InvoiceListTable = ({
                   </td>
                   <td className="py-3">
                     <div className="flex flex-wrap gap-2">
-                      <Link to={`/invoices/${invoice.id}/print`}>
+                      <Link to={`/invoices/${invoice.id}/print`} state={{ backTo }}>
                         <Button variant="secondary" className="h-9 px-3 py-1 text-xs">Print Invoice</Button>
                       </Link>
                       {Number(invoice.dueAmount || 0) <= 0 ? (
-                        <Link to={`/prescriptions/${invoice.visit?.id}/print`}>
+                        <Link to={`/prescriptions/${invoice.visit?.id}/print`} state={{ backTo }}>
                           <Button variant="ghost" className="h-9 px-3 py-1 text-xs">Print Prescription</Button>
                         </Link>
                       ) : (

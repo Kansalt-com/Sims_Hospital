@@ -17,6 +17,7 @@ type PatientForm = {
   name: string;
   age: string;
   gender: "MALE" | "FEMALE" | "OTHER";
+  patientType: "OPD" | "IPD";
   phone: string;
   address: string;
   idProof: string;
@@ -26,6 +27,7 @@ const defaultForm: PatientForm = {
   name: "",
   age: "",
   gender: "MALE",
+  patientType: "OPD",
   phone: "",
   address: "",
   idProof: "",
@@ -86,7 +88,7 @@ export const PatientsPage = () => {
         toast.success("Patient updated");
       } else {
         await patientApi.create(payload);
-        toast.success("Patient registered");
+        toast.success(`Patient registered for ${form.patientType}`);
       }
 
       resetForm();
@@ -119,6 +121,7 @@ export const PatientsPage = () => {
       name: patient.name,
       age: patient.age ? String(patient.age) : "",
       gender: patient.gender,
+      patientType: "OPD",
       phone: patient.phone,
       address: patient.address,
       idProof: patient.idProof ?? "",
@@ -194,6 +197,14 @@ export const PatientsPage = () => {
               <option value="MALE">Male</option>
               <option value="FEMALE">Female</option>
               <option value="OTHER">Other</option>
+            </Select>
+            <Select
+              label="Patient Type"
+              value={form.patientType}
+              onChange={(e) => setForm((prev) => ({ ...prev, patientType: e.target.value as PatientForm["patientType"] }))}
+            >
+              <option value="OPD">OPD</option>
+              <option value="IPD">IPD</option>
             </Select>
             <Input
               label="ID Proof (optional)"

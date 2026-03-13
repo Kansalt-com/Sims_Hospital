@@ -10,7 +10,7 @@ export type VisitTypeValue = (typeof VISIT_TYPES)[number];
 export const VISIT_STATUSES = ["SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"] as const;
 export type VisitStatusValue = (typeof VISIT_STATUSES)[number];
 
-export const IPD_ADMISSION_STATUSES = ["ADMITTED", "DISCHARGED"] as const;
+export const IPD_ADMISSION_STATUSES = ["ADMITTED", "UNDER_TREATMENT", "RECOVERED", "DISCHARGED"] as const;
 export type IpdAdmissionStatusValue = (typeof IPD_ADMISSION_STATUSES)[number];
 
 export const PAYMENT_MODES = ["CASH", "UPI", "CARD", "INSURANCE"] as const;

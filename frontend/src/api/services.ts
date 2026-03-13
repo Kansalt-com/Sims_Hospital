@@ -19,6 +19,7 @@ type DoctorPayload = {
   fullName: string;
   qualification: string;
   specialization: string;
+  experienceYears?: number;
   registrationNumber?: string | null;
   phone?: string | null;
   email?: string | null;
@@ -126,6 +127,7 @@ export const userApi = {
   update: (id: number, payload: Partial<{ name: string; role: string; active: boolean }>) =>
     api.patch(`/users/${id}`, payload),
   resetPassword: (id: number, password: string) => api.post(`/users/${id}/reset-password`, { password }),
+  remove: (id: number) => api.delete(`/users/${id}`),
 };
 
 export const doctorApi = {
@@ -203,6 +205,7 @@ export const ipdApi = {
     id: number,
     payload: Partial<{
       attendingDoctorId: number;
+      status: "ADMITTED" | "UNDER_TREATMENT" | "RECOVERED" | "DISCHARGED";
       roomId?: number | null;
       bedId?: number | null;
       ward: string;
@@ -212,7 +215,7 @@ export const ipdApi = {
       reason: string | null;
     }>,
   ) => api.patch<{ data: IPDAdmission }>(`/ipd/${id}`, payload),
-  discharge: (id: number, payload?: { dischargeNote?: string; dischargedAt?: string }) =>
+  discharge: (id: number, payload?: { dischargedAt?: string }) =>
     api.post<{ data: IPDAdmission }>(`/ipd/${id}/discharge`, payload ?? {}),
 };
 

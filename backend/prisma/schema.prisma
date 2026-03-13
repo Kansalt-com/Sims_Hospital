@@ -51,6 +51,8 @@ enum InvoiceItemCategory {
 
 enum IPDAdmissionStatus {
   ADMITTED
+  UNDER_TREATMENT
+  RECOVERED
   DISCHARGED
 }
 
@@ -264,6 +266,7 @@ model DoctorProfile {
   userId             Int      @unique
   qualification      String
   specialization     String
+  experienceYears    Int      @default(0)
   registrationNumber String?
   phone              String?
   email              String?

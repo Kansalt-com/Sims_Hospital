@@ -5,6 +5,7 @@ export type DoctorProfile = {
   userId: number;
   qualification: string;
   specialization: string;
+  experienceYears?: number;
   registrationNumber?: string | null;
   phone?: string | null;
   email?: string | null;
@@ -18,6 +19,8 @@ export type User = {
   role: Role;
   active?: boolean;
   forcePasswordChange: boolean;
+  createdAt?: string;
+  updatedAt?: string;
   permissions?: string[];
   doctorProfile?: DoctorProfile | null;
 };
@@ -122,7 +125,7 @@ export type IPDAdmission = {
   attendingDoctorId: number;
   roomId?: number | null;
   bedId?: number | null;
-  status: "ADMITTED" | "DISCHARGED";
+  status: "ADMITTED" | "UNDER_TREATMENT" | "RECOVERED" | "DISCHARGED";
   admittedAt: string;
   dischargedAt?: string | null;
   ward: string;

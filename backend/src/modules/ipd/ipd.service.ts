@@ -197,6 +197,14 @@ export const updateAdmission = async (admissionId: number, payload: UpdateAdmiss
     throw new AppError("IPD admission not found", 404, "ADMISSION_NOT_FOUND");
   }
 
+  if (payload.status === "DISCHARGED") {
+    throw new AppError("Use the discharge action to complete discharge", 400, "USE_DISCHARGE_ACTION");
+  }
+
+  if (existing.status === "DISCHARGED") {
+    throw new AppError("Discharged admissions cannot be updated", 400, "DISCHARGED_ADMISSION_LOCKED");
+  }
+
   if (payload.attendingDoctorId) {
     const doctor = await prisma.user.findFirst({
       where: { id: payload.attendingDoctorId, role: "DOCTOR", active: true },
@@ -224,6 +232,7 @@ export const updateAdmission = async (admissionId: number, payload: UpdateAdmiss
       where: { id: admissionId },
       data: {
         attendingDoctorId: payload.attendingDoctorId ?? undefined,
+        status: payload.status ?? undefined,
         roomId: payload.roomId === undefined ? undefined : payload.roomId,
         bedId: payload.bedId === undefined ? undefined : payload.bedId,
         ward: payload.ward ?? undefined,
@@ -300,7 +309,6 @@ export const dischargeAdmission = async (admissionId: number, payload: Discharge
       data: {
         status: "COMPLETED",
         completedAt: dischargeAt,
-        reason: payload.dischargeNote ? `${admission.visit.reason ?? ""}\nDischarge note: ${payload.dischargeNote}`.trim() : undefined,
       },
     });
 

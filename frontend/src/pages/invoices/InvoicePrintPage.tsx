@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { getErrorMessage } from "../../api/client";
 import { invoiceApi } from "../../api/services";
 import { PrintFooter } from "../../components/print/PrintFooter";
 import { PrintHeader } from "../../components/print/PrintHeader";
 import { PrintTable } from "../../components/print/PrintTable";
-import { PoweredByKansalt } from "../../components/branding/PoweredByKansalt";
 import { HospitalBrand } from "../../components/branding/HospitalBrand";
 import { Button } from "../../components/ui/Button";
 import { Loader } from "../../components/ui/Loader";
@@ -16,10 +15,12 @@ import { formatCurrency, formatDateTime } from "../../utils/format";
 import "../../styles/print.css";
 
 export const InvoicePrintPage = () => {
+  const location = useLocation();
   const params = useParams();
   const invoiceId = Number(params.id);
   const [searchParams] = useSearchParams();
   const format = searchParams.get("format") === "thermal" ? "thermal" : "a4";
+  const backTo = (location.state as { backTo?: string } | null)?.backTo ?? "/invoices";
 
   const [loading, setLoading] = useState(true);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
@@ -70,14 +71,14 @@ export const InvoicePrintPage = () => {
           <p className="text-sm text-slate-500">Simplified hospital invoice layout for A4 and thermal printing</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link to={`/invoices/${invoice.id}/print`}>
+          <Link to={`/invoices/${invoice.id}/print`} state={{ backTo }}>
             <Button variant={format === "a4" ? "primary" : "secondary"}>A4</Button>
           </Link>
-          <Link to={`/invoices/${invoice.id}/print?format=thermal`}>
+          <Link to={`/invoices/${invoice.id}/print?format=thermal`} state={{ backTo }}>
             <Button variant={format === "thermal" ? "primary" : "secondary"}>80mm</Button>
           </Link>
           <Button onClick={() => window.print()}>Print Invoice</Button>
-          <Link to="/invoices">
+          <Link to={backTo}>
             <Button variant="ghost">Back</Button>
           </Link>
         </div>
@@ -172,9 +173,8 @@ export const InvoicePrintPage = () => {
           <div className="flex justify-between"><span>Balance</span><span>{formatCurrency(invoice.dueAmount)}</span></div>
         </div>
 
-        <div className="mt-3 flex flex-col items-center gap-2">
-          <PoweredByKansalt stacked className="text-center" />
-          <p className="text-center text-[10px]">{settings.footerNote || "Thank you"}</p>
+        <div className="mt-3 text-center text-[10px]">
+          <p>{settings.footerNote || "Thank you"}</p>
         </div>
       </article>
     </div>

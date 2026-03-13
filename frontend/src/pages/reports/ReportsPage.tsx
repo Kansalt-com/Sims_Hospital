@@ -52,7 +52,7 @@ export const ReportsPage = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-[32px] bg-[linear-gradient(135deg,#082f49,_#155e75,_#166534)] p-8 text-white shadow-2xl shadow-cyan-950/10 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex min-h-[220px] flex-col gap-4 rounded-[32px] bg-[linear-gradient(135deg,#082f49,_#155e75,_#166534)] p-8 text-white shadow-2xl shadow-cyan-950/10 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-sm uppercase tracking-[0.24em] text-cyan-100">Operational Intelligence</p>
           <h1 className="mt-3 text-3xl font-semibold">Hospital analytics and export-ready reports</h1>
@@ -60,14 +60,14 @@ export const ReportsPage = () => {
             Daily OPD, IPD, revenue, doctor load, and payment mix in a format that can be printed or exported for finance and operations.
           </p>
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap items-end gap-3">
           <input
             className="rounded-2xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm text-white outline-none backdrop-blur placeholder:text-white/70"
             type="date"
             value={date}
             onChange={(event) => setDate(event.target.value)}
           />
-          <Button onClick={() => load(date)}>Refresh</Button>
+          <Button onClick={() => load(date)}>Generate Report</Button>
           <Button variant="secondary" onClick={() => exportJson(`hospital-report-${date}.json`, report)}>
             <Download size={16} /> Export
           </Button>

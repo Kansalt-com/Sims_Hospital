@@ -146,16 +146,16 @@ export const PatientProfilePage = () => {
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
                           <p className="font-semibold">Visit #{visit.id}</p>
-                          <p className="text-sm text-slate-500">{visit.type} • Dr. {visit.doctor.name} • {formatDateTime(visit.scheduledAt)}</p>
+                          <p className="text-sm text-slate-500">{visit.type} ï¿½ Dr. {visit.doctor.name} ï¿½ {formatDateTime(visit.scheduledAt)}</p>
                         </div>
                         <div className="flex gap-2">
                           {visit.invoice ? (
-                            <Link to={`/invoices/${visit.invoice.id}/print`}>
+                            <Link to={`/invoices/${visit.invoice.id}/print`} state={{ backTo: `/patients/${patient.id}` }}>
                               <Button variant="secondary" className="h-8 px-3 py-1 text-xs">Print Bill</Button>
                             </Link>
                           ) : null}
                           {visit.prescription && visit.invoice && Number(visit.invoice.dueAmount || 0) <= 0 ? (
-                            <Link to={`/prescriptions/${visit.id}/print`}>
+                            <Link to={`/prescriptions/${visit.id}/print`} state={{ backTo: `/patients/${patient.id}` }}>
                               <Button variant="secondary" className="h-8 px-3 py-1 text-xs">Print Prescription</Button>
                             </Link>
                           ) : null}
@@ -228,7 +228,7 @@ export const PatientProfilePage = () => {
                         <td className="py-3">#{row.visitId}</td>
                         <td className="py-3">{row.printedAt ? formatDateTime(row.printedAt) : "Not yet"}</td>
                         <td className="py-3">
-                          <Link to={`/prescriptions/${row.visitId}/print`}>
+                          <Link to={`/prescriptions/${row.visitId}/print`} state={{ backTo: `/patients/${patient.id}` }}>
                             <Button variant="secondary" className="h-8 px-3 py-1 text-xs">Print</Button>
                           </Link>
                         </td>

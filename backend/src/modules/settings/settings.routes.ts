@@ -15,9 +15,7 @@ const router = Router();
 
 fs.mkdirSync(env.uploadDirPath, { recursive: true });
 const logoUploadDir = path.join(env.uploadDirPath, "logo");
-const footerUploadDir = path.join(env.uploadDirPath, "branding");
 fs.mkdirSync(logoUploadDir, { recursive: true });
-fs.mkdirSync(footerUploadDir, { recursive: true });
 
 const buildLogoStorage = (folderPath: string, filePrefix: string) =>
   multer.diskStorage({
@@ -51,7 +49,6 @@ const settingsSchema = z.object({
   invoicePrefix: z.string().min(2).max(12),
   invoiceSequence: z.number().int().min(1),
   footerNote: z.string().max(300).optional().nullable(),
-  kansaltLogoPath: z.string().max(300).optional().nullable(),
 });
 
 const ensureSettings = async () =>
@@ -116,7 +113,6 @@ router.put(
         invoicePrefix: payload.invoicePrefix,
         invoiceSequence: payload.invoiceSequence,
         footerNote: payload.footerNote ?? null,
-        kansaltLogoPath: payload.kansaltLogoPath ?? null,
       },
     });
 
@@ -127,23 +123,10 @@ router.put(
 router.post(
   "/kansalt-logo",
   authorize("ADMIN"),
-  multer({ storage: buildLogoStorage(footerUploadDir, "footer-logo"), ...uploadOptions }).single("logo"),
   asyncHandler(async (req, res) => {
-    if (!req.file) {
-      throw new AppError("Logo file is required", 400, "LOGO_FILE_REQUIRED");
-    }
-
-    const settings = await ensureSettings();
-    const kansaltLogoPath = `/${env.uploadUrlPath}/branding/${req.file.filename}`.replace(/\\/g, "/");
-
-    const updated = await prisma.hospitalSettings.update({
-      where: { id: settings.id },
-      data: {
-        kansaltLogoPath,
-      },
-    });
-
-    res.json({ data: updated });
+    void req;
+    void res;
+    throw new AppError("Footer branding is managed by the application and cannot be changed here", 400, "FOOTER_BRANDING_LOCKED");
   }),
 );
 

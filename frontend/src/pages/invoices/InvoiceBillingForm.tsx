@@ -48,7 +48,7 @@ export const InvoiceBillingForm = ({
     <Card>
       <form onSubmit={onSubmit} className="space-y-5">
         <FormSection title="Patient Information" description="Select the visit and verify the basic patient details before billing.">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <Select label="Visit" value={visitId} onChange={(event) => onVisitChange(event.target.value)} error={errors.visitId} required>
               <option value="">Choose patient visit</option>
               {visits.map((visit) => (
@@ -58,7 +58,6 @@ export const InvoiceBillingForm = ({
               ))}
             </Select>
             <Input label="Patient Name" placeholder="Selected automatically" value={selectedVisit?.patient.name ?? ""} readOnly />
-            <Input label="Patient ID" placeholder="MRN" value={selectedVisit?.patient.mrn ?? ""} readOnly />
             <Input label="Doctor Name" placeholder="Selected automatically" value={selectedVisit ? `Dr. ${selectedVisit.doctor.name}` : ""} readOnly />
             <Input label="Date" placeholder="Visit date" value={selectedVisit ? formatDateTime(selectedVisit.scheduledAt) : ""} readOnly />
           </div>
@@ -81,9 +80,8 @@ export const InvoiceBillingForm = ({
           {errors.charges ? <p className="mt-3 text-sm font-medium text-red-600">{errors.charges}</p> : null}
         </FormSection>
 
-        <FormSection title="Payment" description="Select the payment mode and confirm the amount received.">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <Input label="Total Amount" placeholder="Calculated automatically" value={formatCurrency(totalAmount)} readOnly />
+        <FormSection title="Payment" description="Select the payment mode to complete billing.">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-2">
             <Select
               label="Payment Mode"
               value={payment.paymentMode}
@@ -109,6 +107,12 @@ export const InvoiceBillingForm = ({
               value={payment.referenceNo}
               onChange={(event) => onPaymentChange({ ...payment, referenceNo: event.target.value })}
             />
+          </div>
+        </FormSection>
+
+        <FormSection title="Total" description="Total is calculated automatically from the selected charges.">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Input label="Total Amount" placeholder="Calculated automatically" value={formatCurrency(totalAmount)} readOnly />
           </div>
         </FormSection>
 
