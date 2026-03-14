@@ -1,0 +1,56 @@
+{{- if .Values.backend.persistence.data.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "hms.backendName" . }}-data
+  namespace: {{ include "hms.namespace" . }}
+  labels:
+    {{- include "hms.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    {{- toYaml .Values.backend.persistence.data.accessModes | nindent 4 }}
+  resources:
+    requests:
+      storage: {{ .Values.backend.persistence.data.size }}
+  {{- if .Values.backend.persistence.data.storageClassName }}
+  storageClassName: {{ .Values.backend.persistence.data.storageClassName }}
+  {{- end }}
+---
+{{- end }}
+{{- if .Values.backend.persistence.uploads.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "hms.backendName" . }}-uploads
+  namespace: {{ include "hms.namespace" . }}
+  labels:
+    {{- include "hms.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    {{- toYaml .Values.backend.persistence.uploads.accessModes | nindent 4 }}
+  resources:
+    requests:
+      storage: {{ .Values.backend.persistence.uploads.size }}
+  {{- if .Values.backend.persistence.uploads.storageClassName }}
+  storageClassName: {{ .Values.backend.persistence.uploads.storageClassName }}
+  {{- end }}
+---
+{{- end }}
+{{- if .Values.backend.persistence.logs.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "hms.backendName" . }}-logs
+  namespace: {{ include "hms.namespace" . }}
+  labels:
+    {{- include "hms.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    {{- toYaml .Values.backend.persistence.logs.accessModes | nindent 4 }}
+  resources:
+    requests:
+      storage: {{ .Values.backend.persistence.logs.size }}
+  {{- if .Values.backend.persistence.logs.storageClassName }}
+  storageClassName: {{ .Values.backend.persistence.logs.storageClassName }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,120 @@
+nameOverride: ""
+fullnameOverride: ""
+
+namespaceOverride: ""
+
+imagePullSecrets: []
+
+global:
+  environment: dev
+  imageRegistry: ghcr.io
+  imagePullPolicy: IfNotPresent
+
+frontend:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: ghcr.io/kansalt-com/sims-hospital-frontend
+    tag: latest-dev
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+  livenessProbe:
+    path: /
+    initialDelaySeconds: 10
+    periodSeconds: 15
+  readinessProbe:
+    path: /
+    initialDelaySeconds: 5
+    periodSeconds: 10
+
+backend:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: ghcr.io/kansalt-com/sims-hospital-backend
+    tag: latest-dev
+  service:
+    type: ClusterIP
+    port: 4000
+    targetPort: 4000
+  config:
+    nodeEnv: production
+    port: "4000"
+    corsOrigin: https://dev.kansalt.com
+    uploadDirPath: /app/uploads
+    uploadUrlPath: uploads
+    logDir: /app/logs
+    enableFileLogging: "true"
+    frontendDistDir: /app/frontend-dist
+  persistence:
+    data:
+      enabled: true
+      size: 2Gi
+      accessModes:
+        - ReadWriteOnce
+      storageClassName: ""
+    uploads:
+      enabled: true
+      size: 5Gi
+      accessModes:
+        - ReadWriteOnce
+      storageClassName: ""
+    logs:
+      enabled: true
+      size: 1Gi
+      accessModes:
+        - ReadWriteOnce
+      storageClassName: ""
+  existingSecret: hms-backend-secrets
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  livenessProbe:
+    path: /api/settings/public
+    initialDelaySeconds: 20
+    periodSeconds: 20
+  readinessProbe:
+    path: /api/settings/public
+    initialDelaySeconds: 10
+    periodSeconds: 10
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 10m
+  hosts:
+    - host: dev.kansalt.com
+      frontendPaths:
+        - path: /
+          pathType: Prefix
+      backendPaths:
+        - path: /api
+          pathType: Prefix
+        - path: /uploads
+          pathType: Prefix
+  tls: []
+
+secrets:
+  create: false
+  name: hms-backend-secrets
+  data:
+    JWT_SECRET: ""
+    DATABASE_URL: ""
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1

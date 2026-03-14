@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "hms.backendName" . }}-config
+  namespace: {{ include "hms.namespace" . }}
+  labels:
+    {{- include "hms.labels" . | nindent 4 }}
+data:
+  NODE_ENV: {{ .Values.backend.config.nodeEnv | quote }}
+  PORT: {{ .Values.backend.config.port | quote }}
+  CORS_ORIGIN: {{ .Values.backend.config.corsOrigin | quote }}
+  UPLOAD_DIR_PATH: {{ .Values.backend.config.uploadDirPath | quote }}
+  UPLOAD_URL_PATH: {{ .Values.backend.config.uploadUrlPath | quote }}
+  LOG_DIR: {{ .Values.backend.config.logDir | quote }}
+  ENABLE_FILE_LOGGING: {{ .Values.backend.config.enableFileLogging | quote }}
+  FRONTEND_DIST_DIR: {{ .Values.backend.config.frontendDistDir | quote }}

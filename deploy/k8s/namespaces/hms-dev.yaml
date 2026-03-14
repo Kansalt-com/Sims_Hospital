@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hms-dev
+  labels:
+    app.kubernetes.io/name: hms
+    app.kubernetes.io/part-of: sims-hospital
+    app.kubernetes.io/environment: dev

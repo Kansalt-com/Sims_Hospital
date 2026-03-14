@@ -1,0 +1,36 @@
+global:
+  environment: dev
+
+namespaceOverride: hms-dev
+
+frontend:
+  replicaCount: 1
+  image:
+    tag: latest-dev
+
+backend:
+  replicaCount: 1
+  image:
+    tag: latest-dev
+  config:
+    corsOrigin: https://dev.kansalt.com
+  persistence:
+    data:
+      size: 2Gi
+    uploads:
+      size: 5Gi
+    logs:
+      size: 1Gi
+
+ingress:
+  hosts:
+    - host: dev.kansalt.com
+      frontendPaths:
+        - path: /
+          pathType: Prefix
+      backendPaths:
+        - path: /api
+          pathType: Prefix
+        - path: /uploads
+          pathType: Prefix
+  tls: []

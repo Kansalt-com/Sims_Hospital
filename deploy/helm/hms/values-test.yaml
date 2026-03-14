@@ -1,0 +1,36 @@
+global:
+  environment: test
+
+namespaceOverride: hms-test
+
+frontend:
+  replicaCount: 1
+  image:
+    tag: latest-test
+
+backend:
+  replicaCount: 1
+  image:
+    tag: latest-test
+  config:
+    corsOrigin: https://test.kansalt.com
+  persistence:
+    data:
+      size: 3Gi
+    uploads:
+      size: 6Gi
+    logs:
+      size: 2Gi
+
+ingress:
+  hosts:
+    - host: test.kansalt.com
+      frontendPaths:
+        - path: /
+          pathType: Prefix
+      backendPaths:
+        - path: /api
+          pathType: Prefix
+        - path: /uploads
+          pathType: Prefix
+  tls: []
