@@ -4,7 +4,7 @@ global:
 namespaceOverride: hms-prod
 
 frontend:
-  replicaCount: 2
+  replicaCount: 1
   image:
     tag: latest-prod
   resources:
@@ -16,7 +16,7 @@ frontend:
       memory: 384Mi
 
 backend:
-  replicaCount: 2
+  replicaCount: 1
   image:
     tag: latest-prod
   config:
