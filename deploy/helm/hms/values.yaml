@@ -50,7 +50,7 @@ backend:
     nodeEnv: production
     port: "4000"
     databaseUrl: file:/app/data/sims-dev.db
-    corsOrigin: https://dev.kansalt.com
+    corsOrigin: https://kansalt.dev.com
     uploadDirPath: /app/uploads
     uploadUrlPath: uploads
     logDir: /app/logs
@@ -98,14 +98,14 @@ ingress:
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: 10m
   hosts:
-    - host: dev.kansalt.com
+    - host: kansalt.dev.com
       frontendPaths:
-        - path: /
+        - path: /sims
           pathType: Prefix
       backendPaths:
-        - path: /api
+        - path: /sims/api
           pathType: Prefix
-        - path: /uploads
+        - path: /sims/uploads
           pathType: Prefix
   tls: []
 

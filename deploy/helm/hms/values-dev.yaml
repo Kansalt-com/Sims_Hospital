@@ -14,7 +14,7 @@ backend:
     tag: latest-dev
   config:
     databaseUrl: file:/app/data/sims-dev.db
-    corsOrigin: https://dev.kansalt.com
+    corsOrigin: https://kansalt.dev.com
   persistence:
     data:
       size: 2Gi
@@ -25,13 +25,13 @@ backend:
 
 ingress:
   hosts:
-    - host: dev.kansalt.com
+    - host: kansalt.dev.com
       frontendPaths:
-        - path: /
+        - path: /sims
           pathType: Prefix
       backendPaths:
-        - path: /api
+        - path: /sims/api
           pathType: Prefix
-        - path: /uploads
+        - path: /sims/uploads
           pathType: Prefix
   tls: []

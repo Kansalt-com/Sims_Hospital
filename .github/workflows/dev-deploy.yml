@@ -53,6 +53,8 @@ jobs:
 
       - name: Build frontend
         working-directory: frontend
+        env:
+          VITE_APP_BASE_PATH: /sims/
         run: npm run build
 
       - name: Compute image metadata
@@ -90,7 +92,7 @@ jobs:
           file: deploy/docker/frontend.Dockerfile
           push: true
           build-args: |
-            VITE_APP_BASE_PATH=/
+            VITE_APP_BASE_PATH=/sims/
           tags: |
             ${{ steps.meta.outputs.frontend_image }}:dev-${{ steps.meta.outputs.short_sha }}
             ${{ steps.meta.outputs.frontend_image }}:latest-dev
