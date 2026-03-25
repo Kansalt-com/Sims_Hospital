@@ -9,7 +9,7 @@ import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Input } from "../../components/ui/Input";
 import { Loader } from "../../components/ui/Loader";
-import { formatDateTime } from "../../utils/format";
+import { formatDate } from "../../utils/format";
 
 export const PrescriptionPage = () => {
   const [loading, setLoading] = useState(true);
@@ -67,7 +67,7 @@ export const PrescriptionPage = () => {
                   <tr key={row.id} className="border-b border-slate-100">
                     <td className="py-3">
                       <p className="font-medium">#{row.id}</p>
-                      <p className="text-xs text-slate-500">{formatDateTime(row.scheduledAt)}</p>
+                      <p className="text-xs text-slate-500">{formatDate(row.scheduledAt)}</p>
                     </td>
                     <td className="py-3">
                       <p className="font-medium">{row.patient.name}</p>

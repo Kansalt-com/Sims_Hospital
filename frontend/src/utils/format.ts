@@ -17,3 +17,8 @@ export const formatDate = (value?: string | null) => {
   if (!value) return "-";
   return dayjs(value).format("DD MMM YYYY");
 };
+
+export const formatVisitDate = (value?: string | null, type?: string | null) => {
+  if (!value) return "-";
+  return type === "OPD" ? formatDate(value) : formatDateTime(value);
+};

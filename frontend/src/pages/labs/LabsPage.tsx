@@ -24,7 +24,7 @@ export const LabsPage = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Labs Module</h1>
-        <p className="text-sm text-slate-500">Browse SIMS lab, X-ray, and ultrasound charges from the imported price master and then add them to an open bill from Billing.</p>
+        <p className="text-sm text-slate-500">Browse SIMS lab, X-ray, and ultrasound charges from the imported price master and then add them from Billing.</p>
       </div>
 
       <Card className="rounded-[28px]">
@@ -42,7 +42,7 @@ export const LabsPage = () => {
           />
           <div className="flex items-end">
             <Link to="/invoices" className="w-full">
-              <Button className="w-full">Open Billing Desk</Button>
+              <Button className="w-full">Billing Desk</Button>
             </Link>
           </div>
         </div>

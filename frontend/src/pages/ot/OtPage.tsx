@@ -20,7 +20,7 @@ export const OtPage = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">OT Module</h1>
-        <p className="text-sm text-slate-500">Review surgery package pricing and OT-related bill heads. Use the Billing Desk to add these charges into an open bill for the patient.</p>
+        <p className="text-sm text-slate-500">Review surgery package pricing and OT-related bill heads. Use the Billing Desk to add these charges to the patient bill.</p>
       </div>
 
       <Card className="rounded-[28px]">
@@ -33,7 +33,7 @@ export const OtPage = () => {
           />
           <div className="flex items-end">
             <Link to="/invoices" className="w-full">
-              <Button className="w-full">Open Billing Desk</Button>
+              <Button className="w-full">Billing Desk</Button>
             </Link>
           </div>
         </div>

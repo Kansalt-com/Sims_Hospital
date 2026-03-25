@@ -53,7 +53,7 @@ export const VisitRegistrationForm = ({
         </Select>
 
         <Input label="Consultation Fee" type="number" min={0} prefix="Rs" value={form.consultationFee} onChange={(e) => onFormChange({ ...form, consultationFee: e.target.value })} required />
-        <Input label="Scheduled Date & Time" type="datetime-local" value={form.scheduledAt} onChange={(e) => onFormChange({ ...form, scheduledAt: e.target.value })} />
+        <Input label="Scheduled Date" type="date" value={form.scheduledAt} onChange={(e) => onFormChange({ ...form, scheduledAt: e.target.value })} />
         <Input label="Reason" value={form.reason} onChange={(e) => onFormChange({ ...form, reason: e.target.value })} />
 
         {patientMode === "new" ? (

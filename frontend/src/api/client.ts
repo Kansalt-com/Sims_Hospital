@@ -14,15 +14,20 @@ type ApiErrorPayload = {
   code?: string;
 };
 
-const runtimeBase =
-  import.meta.env.VITE_API_BASE_URL ||
-  (import.meta.env.DEV
-    ? "http://localhost:4000/api"
-    : typeof window !== "undefined"
-      ? `${window.location.origin}${normalizeBasePath(import.meta.env.BASE_URL)}/api`
-      : "http://localhost:4000/api");
+const getRuntimeBase = () => {
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
 
-const baseURL = runtimeBase;
+  if (import.meta.env.DEV) {
+    return "http://localhost:4000/api";
+  }
+
+  const basePath = normalizeBasePath(import.meta.env.BASE_URL);
+  return `${basePath}/api`;
+};
+
+const baseURL = getRuntimeBase();
 const AUTH_EVENT = "auth:unauthorized";
 
 export const api = axios.create({

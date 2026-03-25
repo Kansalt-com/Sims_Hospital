@@ -5,7 +5,7 @@ import { FormSection } from "../../components/ui/FormSection";
 import { Input } from "../../components/ui/Input";
 import { Select } from "../../components/ui/Select";
 import { Textarea } from "../../components/ui/Textarea";
-import { formatCurrency, formatDateTime } from "../../utils/format";
+import { formatCurrency, formatVisitDate } from "../../utils/format";
 import type {
   BillingErrors,
   CatalogSelection,
@@ -71,25 +71,25 @@ export const InvoiceBillingForm = ({
   return (
     <Card>
       <form onSubmit={onSubmit} className="space-y-5">
-        <FormSection title="Patient Information" description="Select the visit or admission bill you want to work on. Existing visit invoices behave as open bills.">
+        <FormSection title="Patient Information" description="Select the visit or admission bill you want to work on. Existing visit invoices can be updated with additional charges.">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <Select label="Visit" value={visitId} onChange={(event) => onVisitChange(event.target.value)} error={errors.visitId} required>
               <option value="">Choose patient visit</option>
               {visits.map((visit) => (
                 <option key={visit.id} value={visit.id}>
                   #{visit.id} - {visit.patient.name} - Dr. {visit.doctor.name}
-                  {visit.invoice ? ` - Open Bill ${visit.invoice.invoiceNo}` : ""}
+                  {visit.invoice ? ` - Bill ${visit.invoice.invoiceNo}` : ""}
                 </option>
               ))}
             </Select>
             <Input label="Patient Name" placeholder="Selected automatically" value={selectedVisit?.patient.name ?? ""} readOnly />
             <Input label="Doctor Name" placeholder="Selected automatically" value={selectedVisit ? `Dr. ${selectedVisit.doctor.name}` : ""} readOnly />
-            <Input label="Date" placeholder="Visit date" value={selectedVisit ? formatDateTime(selectedVisit.scheduledAt) : ""} readOnly />
+            <Input label="Date" placeholder="Visit date" value={selectedVisit ? formatVisitDate(selectedVisit.scheduledAt, selectedVisit.type) : ""} readOnly />
           </div>
 
           {existingInvoice ? (
             <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-sm text-amber-900">
-              <p className="font-semibold">Open bill detected: {existingInvoice.invoiceNo}</p>
+              <p className="font-semibold">Existing bill detected: {existingInvoice.invoiceNo}</p>
               <p className="mt-1">
                 Total {formatCurrency(existingInvoice.total)} | Paid {formatCurrency(existingInvoice.paidAmount)} | Due {formatCurrency(existingInvoice.dueAmount)}
               </p>
@@ -144,7 +144,7 @@ export const InvoiceBillingForm = ({
           </div>
         </FormSection>
 
-        <FormSection title="Bill Items" description="This is the open bill area. Add or edit charges freely before collecting payment.">
+        <FormSection title="Bill Items" description="Add or edit charges freely before collecting payment.">
           {draftItems.length === 0 ? (
             <p className="text-sm text-slate-500">No charges added yet.</p>
           ) : (
@@ -208,7 +208,7 @@ export const InvoiceBillingForm = ({
           {errors.items ? <p className="mt-3 text-sm font-medium text-red-600">{errors.items}</p> : null}
         </FormSection>
 
-        <FormSection title="Payment" description="Leave paid amount at 0 to keep the bill open and collect later.">
+        <FormSection title="Payment" description="Leave paid amount at 0 to collect later.">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-2">
             <Select
               label="Payment Mode"
@@ -238,7 +238,7 @@ export const InvoiceBillingForm = ({
             <Textarea
               label="Notes"
               className="min-h-[88px]"
-              placeholder="Optional open bill note, package note, surgery note, or billing remark"
+              placeholder="Optional billing note, package note, surgery note, or billing remark"
               value={notes}
               onChange={(event) => onNotesChange(event.target.value)}
             />
@@ -251,10 +251,10 @@ export const InvoiceBillingForm = ({
           </div>
         </FormSection>
 
-        <FormSection title="Actions" description="Create a new bill or append these charges to the existing open bill.">
+        <FormSection title="Actions" description="Create a new bill or append these charges to the existing bill.">
           <div className="flex flex-wrap gap-3">
             <Button type="submit" disabled={saving}>
-              {saving ? "Saving..." : existingInvoice ? "Add Charges to Open Bill" : "Create Open Bill"}
+              {saving ? "Saving..." : existingInvoice ? "Add Charges to Bill" : "Create Bill"}
             </Button>
             <Button variant="secondary" onClick={onReset}>Clear Form</Button>
             {lastCreatedInvoiceId ? (

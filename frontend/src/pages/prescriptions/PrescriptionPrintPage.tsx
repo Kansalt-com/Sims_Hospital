@@ -7,7 +7,7 @@ import type { HospitalSettings, Visit } from "../../types";
 import { HospitalBrand } from "../../components/branding/HospitalBrand";
 import { Button } from "../../components/ui/Button";
 import { Loader } from "../../components/ui/Loader";
-import { formatDateTime } from "../../utils/format";
+import { formatDate, formatDateTime } from "../../utils/format";
 import "../../styles/print.css";
 
 type PrescriptionVisit = Visit & {
@@ -159,7 +159,7 @@ export const PrescriptionPrintPage = () => {
         </section>
 
         <div className="prescription-footer-row">
-          <p className="visit-meta">Visit: #{visit.id} | Bill ID: {visit.invoice.invoiceNo} | {formatDateTime(visit.scheduledAt)}</p>
+          <p className="visit-meta">Visit: #{visit.id} | Bill ID: {visit.invoice.invoiceNo} | {formatDate(visit.scheduledAt)}</p>
         </div>
         <footer className="prescription-sheet__footer">
           <p className="prescription-sheet__thank-you">{settings.footerNote || "Thank you for choosing SIMS Hospital."}</p>
