@@ -1,0 +1,91 @@
+name: HMS CI And Deploy
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+  push:
+    branches:
+      - main
+      - master
+
+concurrency:
+  group: hms-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            backend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: backend
+        run: npm run prisma:generate
+
+      - name: Build frontend for /hms
+        working-directory: frontend
+        env:
+          VITE_APP_BASE_PATH: /hms/
+          VITE_API_BASE_URL: https://www.kansalt.com/hms/api
+          VITE_UPLOAD_BASE_URL: https://www.kansalt.com/hms
+        run: npm run build
+
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      - name: Run backend tests
+        working-directory: backend
+        run: npm test --if-present
+
+  dispatch-deploy:
+    if: github.event_name == 'push'
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Trigger Kansalt infra deployment
+        env:
+          DISPATCH_TOKEN: ${{ secrets.KANSALT_INFRA_DISPATCH_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl --fail --show-error --silent \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${DISPATCH_TOKEN}" \
+            https://api.github.com/repos/Kansalt-com/Kansalt/dispatches \
+            -d @- <<EOF
+          {
+            "event_type": "deploy-hms",
+            "client_payload": {
+              "hms_ref": "${GITHUB_REF_NAME}",
+              "hms_sha": "${GITHUB_SHA}"
+            }
+          }
+          EOF

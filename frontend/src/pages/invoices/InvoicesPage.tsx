@@ -24,15 +24,24 @@ export const InvoicesPage = () => {
     errors,
     visitId,
     setVisitId,
-    charges,
-    handleChargeChange,
+    draftItems,
+    addCatalogItem,
+    addCustomItem,
+    updateDraftItem,
+    removeDraftItem,
     payment,
     setPayment,
+    notes,
+    setNotes,
+    catalogSelection,
+    setCatalogSelection,
+    catalogItems,
     lastCreated,
     selectedVisit,
+    existingInvoice,
     totalAmount,
     load,
-    createInvoice,
+    createOrUpdateInvoice,
     resetForm,
     paymentTarget,
     paymentDraft,
@@ -61,30 +70,39 @@ export const InvoicesPage = () => {
         visitId={visitId}
         visits={visits}
         selectedVisit={selectedVisit}
+        existingInvoice={existingInvoice}
         errors={errors}
-        charges={charges}
+        draftItems={draftItems}
         payment={payment}
+        notes={notes}
         totalAmount={totalAmount}
         saving={saving}
         lastCreatedInvoiceId={lastCreated?.invoiceId ?? null}
+        catalogSelection={catalogSelection}
+        catalogItems={catalogItems}
         onVisitChange={setVisitId}
-        onChargeChange={handleChargeChange}
+        onCatalogSelectionChange={setCatalogSelection}
+        onAddCatalogItem={() => addCatalogItem(catalogItems.find((item) => item.id === catalogSelection.itemId) ?? null)}
+        onAddCustomItem={addCustomItem}
+        onDraftItemChange={updateDraftItem}
+        onRemoveDraftItem={removeDraftItem}
         onPaymentChange={(value) => {
           if (isNumeric(value.amount)) {
             setPayment(value);
           }
         }}
+        onNotesChange={setNotes}
         onSubmit={async (event) => {
           event.preventDefault();
-          await createInvoice();
+          await createOrUpdateInvoice();
         }}
         onReset={resetForm}
       />
 
       {lastCreated ? (
         <Card className="border border-emerald-200 bg-emerald-50/60">
-          <h3 className="text-lg font-semibold text-emerald-800">Invoice generated successfully</h3>
-          <p className="mt-1 text-sm text-emerald-700">Invoice created for visit #{lastCreated.visitId}. Print is ready.</p>
+          <h3 className="text-lg font-semibold text-emerald-800">Billing updated successfully</h3>
+          <p className="mt-1 text-sm text-emerald-700">The open bill for visit #{lastCreated.visitId} is ready for print and further payment collection.</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Link to={`/invoices/${lastCreated.invoiceId}/print`} state={{ backTo: backTo || `${location.pathname}${location.search}` }}>
               <Button>Print Invoice</Button>
@@ -113,6 +131,10 @@ export const InvoicesPage = () => {
         }}
         onRetry={() => load(query)}
         onCollectPayment={openPaymentModal}
+        onAddCharges={(invoice) => {
+          setVisitId(String(invoice.visitId));
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
       />
 
       <PaymentModal
