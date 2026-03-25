@@ -5,7 +5,6 @@ import { getErrorMessage } from "../../api/client";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
-import { Input } from "../../components/ui/Input";
 import { Loader } from "../../components/ui/Loader";
 import type { AnalyticsReport } from "../../types";
 import { formatCurrency } from "../../utils/format";
@@ -75,26 +74,26 @@ export const ReportsPage = () => {
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[180px]">
-            <Input
-              className="border-white/20 text-white placeholder:text-white/70"
-              label="From Date"
+          <label className="flex min-w-[180px] flex-col gap-1 text-sm text-cyan-50">
+            <span className="font-medium">From Date</span>
+            <input
+              className="rounded-2xl border border-white/20 bg-slate-950/20 px-4 py-2.5 text-sm text-white outline-none backdrop-blur placeholder:text-white/70"
               type="date"
               value={fromDate}
               max={toDate}
               onChange={(event) => setFromDate(event.target.value)}
             />
-          </div>
-          <div className="min-w-[180px]">
-            <Input
-              className="border-white/20 text-white placeholder:text-white/70"
-              label="To Date"
+          </label>
+          <label className="flex min-w-[180px] flex-col gap-1 text-sm text-cyan-50">
+            <span className="font-medium">To Date</span>
+            <input
+              className="rounded-2xl border border-white/20 bg-slate-950/20 px-4 py-2.5 text-sm text-white outline-none backdrop-blur placeholder:text-white/70"
               type="date"
               value={toDate}
               min={fromDate}
               onChange={(event) => setToDate(event.target.value)}
             />
-          </div>
+          </label>
           <Button onClick={() => load(fromDate, toDate)}>Generate Report</Button>
           <Button variant="secondary" onClick={exportReport} disabled={exporting}>
             <Download size={16} /> {exporting ? "Exporting..." : "Export XLS"}
