@@ -467,6 +467,18 @@
   background: #fff;
 }
 
+.bill-print-shell {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  background: #ffffff;
+}
+
+.sims-bill-sheet {
+  width: 100%;
+  background: #ffffff;
+}
+
 @page {
   margin: 8mm;
   size: A4;
@@ -482,6 +494,16 @@
     min-height: auto;
     box-shadow: none;
     border: none;
+  }
+
+  .bill-print-shell {
+    width: auto;
+    min-height: auto;
+    margin: 0;
+  }
+
+  .sims-bill-sheet {
+    box-shadow: none !important;
   }
 
   .prescription-print-shell {

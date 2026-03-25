@@ -253,12 +253,13 @@ export type DashboardSnapshot = {
 };
 
 export type AnalyticsReport = {
-  date: string;
+  fromDate: string;
+  toDate: string;
   summary: {
-    dailyOpd: number;
-    dailyIpd: number;
-    dailyRevenue: number;
-    monthlyRevenue: number;
+    opdCount: number;
+    ipdCount: number;
+    rangeRevenue: number;
+    monthToDateRevenue: number;
   };
   doctorWisePatients: Array<{
     doctorId: number;
@@ -274,5 +275,20 @@ export type AnalyticsReport = {
     paymentMode: string;
     payments: number;
     amount: number;
+  }>;
+  invoices: Array<{
+    invoiceNo: string;
+    createdAt: string;
+    patientName: string;
+    patientMrn: string;
+    doctorName: string;
+    visitId: number;
+    visitType: string;
+    invoiceType: string;
+    total: number;
+    paidAmount: number;
+    dueAmount: number;
+    paymentStatus: string;
+    paymentMode: string;
   }>;
 };

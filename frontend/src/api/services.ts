@@ -303,5 +303,11 @@ export const roomApi = {
 
 export const reportsApi = {
   dashboard: (date?: string) => api.get<{ data: DashboardSnapshot }>("/reports/dashboard", { params: { date } }),
-  analytics: (date?: string) => api.get<{ data: AnalyticsReport }>("/reports/analytics", { params: { date } }),
+  analytics: (params?: { date?: string; fromDate?: string; toDate?: string }) =>
+    api.get<{ data: AnalyticsReport }>("/reports/analytics", { params }),
+  exportAnalytics: (params?: { date?: string; fromDate?: string; toDate?: string }) =>
+    api.get<Blob>("/reports/analytics/export", {
+      params,
+      responseType: "blob",
+    }),
 };

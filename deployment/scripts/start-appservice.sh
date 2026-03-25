@@ -24,9 +24,8 @@ if [ -d "${APP_ROOT}/backend/uploads" ] && [ -z "$(find "${PERSIST_ROOT}/uploads
   log "startup.seeded_uploads"
 fi
 
-if [ ! -f "${MARKER_FILE}" ]; then
+if [ ! -f "${MARKER_FILE}" ] || [ "${APP_ROOT}/backend/package-lock.json" -nt "${MARKER_FILE}" ] || [ ! -d "${APP_ROOT}/backend/node_modules" ]; then
   log "startup.installing_backend_dependencies"
-  rm -rf "${APP_ROOT}/backend/node_modules"
   npm ci --prefix "${APP_ROOT}/backend" --include=dev 2>&1 | tee -a "${STARTUP_LOG}"
   (
     cd "${APP_ROOT}/backend"
