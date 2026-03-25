@@ -8,7 +8,7 @@ import { Loader } from "../components/ui/Loader";
 import { Button } from "../components/ui/Button";
 import { useAuth } from "../context/AuthContext";
 import type { DashboardSnapshot, Visit } from "../types";
-import { formatCurrency, formatDateTime } from "../utils/format";
+import { formatCurrency, formatDateTime, formatVisitDate } from "../utils/format";
 import { getErrorMessage } from "../api/client";
 
 const widgetCards = [
@@ -137,7 +137,7 @@ export const DashboardPage = () => {
                   </div>
                   <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500">
                     <span>{visit.type}</span>
-                    <span>{formatDateTime(visit.scheduledAt)}</span>
+                    <span>{formatVisitDate(visit.scheduledAt, visit.type)}</span>
                     {visit.invoice ? <span>{visit.invoice.paymentStatus}</span> : <span>Awaiting billing</span>}
                   </div>
                 </div>

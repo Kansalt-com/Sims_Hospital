@@ -8,7 +8,7 @@ import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Loader } from "../../components/ui/Loader";
 import type { Patient, Visit } from "../../types";
-import { formatCurrency, formatDateTime } from "../../utils/format";
+import { formatCurrency, formatDateTime, formatVisitDate } from "../../utils/format";
 
 type PrescriptionRow = {
   id: number;
@@ -146,7 +146,7 @@ export const PatientProfilePage = () => {
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
                           <p className="font-semibold">Visit #{visit.id}</p>
-                          <p className="text-sm text-slate-500">{visit.type} � Dr. {visit.doctor.name} � {formatDateTime(visit.scheduledAt)}</p>
+                          <p className="text-sm text-slate-500">{visit.type} - Dr. {visit.doctor.name} - {formatVisitDate(visit.scheduledAt, visit.type)}</p>
                         </div>
                         <div className="flex gap-2">
                           {visit.invoice ? (

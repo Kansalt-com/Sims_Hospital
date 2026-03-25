@@ -9,7 +9,7 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { Input } from "../../components/ui/Input";
 import { Loader } from "../../components/ui/Loader";
 import { Textarea } from "../../components/ui/Textarea";
-import { formatDateTime } from "../../utils/format";
+import { formatDate, formatDateTime } from "../../utils/format";
 
 type PrescriptionItem = {
   medicine: string;
@@ -163,7 +163,7 @@ export const DoctorPortalPage = () => {
                   onClick={() => setSelectedId(visit.id)}
                 >
                   <p className="font-medium">{visit.patient.name}</p>
-                  <p className="text-xs text-slate-500">{formatDateTime(visit.scheduledAt)}</p>
+                  <p className="text-xs text-slate-500">{formatDate(visit.scheduledAt)}</p>
                   <div className="mt-2">
                     <Badge tone={visit.status === "COMPLETED" ? "success" : visit.status === "IN_PROGRESS" ? "warning" : "default"}>
                       {visit.status}

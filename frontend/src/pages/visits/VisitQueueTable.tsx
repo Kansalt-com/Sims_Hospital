@@ -4,7 +4,7 @@ import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Input } from "../../components/ui/Input";
 import { Loader } from "../../components/ui/Loader";
-import { formatCurrency, formatDateTime } from "../../utils/format";
+import { formatCurrency, formatDate } from "../../utils/format";
 import type { VisitQueueItem } from "./visitTypes";
 
 type VisitQueueTableProps = {
@@ -58,7 +58,7 @@ export const VisitQueueTable = ({
                 <th className="py-2">Doctor</th>
                 <th className="py-2">Fee</th>
                 <th className="py-2">Billing</th>
-                <th className="py-2">Time</th>
+                <th className="py-2">Date</th>
                 <th className="py-2">Status</th>
                 <th className="py-2">Actions</th>
               </tr>
@@ -82,7 +82,7 @@ export const VisitQueueTable = ({
                       <span className="text-xs text-slate-500">Not billed</span>
                     )}
                   </td>
-                  <td className="py-3">{formatDateTime(row.scheduledAt)}</td>
+                  <td className="py-3">{formatDate(row.scheduledAt)}</td>
                   <td className="py-3">
                     <Badge tone={row.status === "COMPLETED" ? "success" : row.status === "IN_PROGRESS" ? "warning" : "default"}>{row.status}</Badge>
                   </td>

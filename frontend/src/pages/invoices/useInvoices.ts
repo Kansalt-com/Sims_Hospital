@@ -267,7 +267,7 @@ export const useInvoices = (presetVisitId = "") => {
             notes: notes.trim() || undefined,
           });
 
-      toast.success(existingInvoice ? "Charges added to open bill" : "Open bill created successfully");
+      toast.success(existingInvoice ? "Charges added to bill" : "Bill created successfully");
       setLastCreated({
         invoiceId: response.data.data.id,
         visitId: response.data.data.visitId,

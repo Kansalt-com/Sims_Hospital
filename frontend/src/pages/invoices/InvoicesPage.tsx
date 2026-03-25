@@ -102,7 +102,7 @@ export const InvoicesPage = () => {
       {lastCreated ? (
         <Card className="border border-emerald-200 bg-emerald-50/60">
           <h3 className="text-lg font-semibold text-emerald-800">Billing updated successfully</h3>
-          <p className="mt-1 text-sm text-emerald-700">The open bill for visit #{lastCreated.visitId} is ready for print and further payment collection.</p>
+          <p className="mt-1 text-sm text-emerald-700">The bill for visit #{lastCreated.visitId} is ready for print and further payment collection.</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Link to={`/invoices/${lastCreated.invoiceId}/print`} state={{ backTo: backTo || `${location.pathname}${location.search}` }}>
               <Button>Print Invoice</Button>
