@@ -1,0 +1,8 @@
+{
+  "name": "sims-hospital-azure-deploy",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "postinstall": "npm --prefix backend ci && npm --prefix backend exec prisma generate && npm --prefix backend run build"
+  }
+}

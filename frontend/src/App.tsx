@@ -12,6 +12,8 @@ import { DoctorsPage } from "./pages/doctors/DoctorsPage";
 import { IpdPage } from "./pages/ipd/IpdPage";
 import { InvoicePrintPage } from "./pages/invoices/InvoicePrintPage";
 import { InvoicesPage } from "./pages/invoices/InvoicesPage";
+import { LabsPage } from "./pages/labs/LabsPage";
+import { OtPage } from "./pages/ot/OtPage";
 import { PatientProfilePage } from "./pages/patients/PatientProfilePage";
 import { PatientsPage } from "./pages/patients/PatientsPage";
 import { PrescriptionPage } from "./pages/prescriptions/PrescriptionPage";
@@ -36,6 +38,8 @@ export const App = () => {
           <Route path="/patients" element={<PatientsPage />} />
           <Route path="/patients/:id" element={<PatientProfilePage />} />
           <Route path="/invoices" element={<InvoicesPage />} />
+          <Route path="/labs" element={<LabsPage />} />
+          <Route path="/ot" element={<OtPage />} />
           <Route path="/ipd" element={<IpdPage />} />
           <Route path="/prescriptions" element={<PrescriptionPage />} />
 

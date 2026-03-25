@@ -2,13 +2,15 @@ import { Router } from "express";
 import { authenticate, authorize, type AuthenticatedRequest } from "../../middleware/auth.js";
 import { validateBody, validateParams, validateQuery } from "../../middleware/validate.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
-import { addInvoicePayments, createInvoice, getInvoiceById, listInvoices } from "./invoices.service.js";
+import { addInvoiceItems, addInvoicePayments, createInvoice, getInvoiceById, listInvoices } from "./invoices.service.js";
 import {
   addPaymentSchema,
+  appendInvoiceItemsSchema,
   createInvoiceSchema,
   idParamsSchema,
   listQuerySchema,
   type AddInvoicePaymentsInput,
+  type AppendInvoiceItemsInput,
   type CreateInvoiceInput,
   type InvoiceListQuery,
 } from "./invoices.validation.js";
@@ -42,6 +44,21 @@ router.post(
   asyncHandler(async (req: AuthenticatedRequest, res) => {
     const invoice = await createInvoice(req.body as CreateInvoiceInput, req);
     res.status(201).json({ data: invoice });
+  }),
+);
+
+router.post(
+  "/:id/items",
+  authorize("ADMIN", "RECEPTION", "BILLING", "PHARMACY"),
+  validateParams(idParamsSchema),
+  validateBody(appendInvoiceItemsSchema),
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const updated = await addInvoiceItems(
+      Number((req.params as { id: string }).id),
+      req.body as AppendInvoiceItemsInput,
+      req,
+    );
+    res.status(201).json({ data: updated });
   }),
 );
 

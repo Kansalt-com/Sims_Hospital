@@ -4,56 +4,81 @@ import { Card } from "../../components/ui/Card";
 import { FormSection } from "../../components/ui/FormSection";
 import { Input } from "../../components/ui/Input";
 import { Select } from "../../components/ui/Select";
-import {
-  BILLING_CHARGE_FIELDS,
-  type BillingChargeState,
-} from "../../utils/billing";
+import { Textarea } from "../../components/ui/Textarea";
 import { formatCurrency, formatDateTime } from "../../utils/format";
-import type { BillingErrors, PaymentFormState, VisitOption } from "./invoiceTypes";
+import type {
+  BillingErrors,
+  CatalogSelection,
+  DraftBillingItem,
+  ExistingInvoiceSummary,
+  PaymentFormState,
+  VisitOption,
+} from "./invoiceTypes";
 
 type InvoiceBillingFormProps = {
   visitId: string;
   visits: VisitOption[];
   selectedVisit: VisitOption | null;
+  existingInvoice: ExistingInvoiceSummary | null;
   errors: BillingErrors;
-  charges: BillingChargeState;
+  draftItems: DraftBillingItem[];
   payment: PaymentFormState;
+  notes: string;
   totalAmount: number;
   saving: boolean;
   lastCreatedInvoiceId?: number | null;
+  catalogSelection: CatalogSelection;
+  catalogItems: Array<{ id: string; name: string; price: number; source: string; editablePrice?: boolean }>;
   onVisitChange: (value: string) => void;
-  onChargeChange: (key: keyof BillingChargeState, value: string) => void;
+  onCatalogSelectionChange: (value: CatalogSelection) => void;
+  onAddCatalogItem: () => void;
+  onAddCustomItem: () => void;
+  onDraftItemChange: (id: string, patch: Partial<DraftBillingItem>) => void;
+  onRemoveDraftItem: (id: string) => void;
   onPaymentChange: (value: PaymentFormState) => void;
+  onNotesChange: (value: string) => void;
   onSubmit: (event: React.FormEvent) => void;
   onReset: () => void;
 };
+
+const itemCategories = ["CONSULTATION", "LAB", "PROCEDURE", "MEDICINE", "MISC"] as const;
 
 export const InvoiceBillingForm = ({
   visitId,
   visits,
   selectedVisit,
+  existingInvoice,
   errors,
-  charges,
+  draftItems,
   payment,
+  notes,
   totalAmount,
   saving,
   lastCreatedInvoiceId,
+  catalogSelection,
+  catalogItems,
   onVisitChange,
-  onChargeChange,
+  onCatalogSelectionChange,
+  onAddCatalogItem,
+  onAddCustomItem,
+  onDraftItemChange,
+  onRemoveDraftItem,
   onPaymentChange,
+  onNotesChange,
   onSubmit,
   onReset,
 }: InvoiceBillingFormProps) => {
   return (
     <Card>
       <form onSubmit={onSubmit} className="space-y-5">
-        <FormSection title="Patient Information" description="Select the visit and verify the basic patient details before billing.">
+        <FormSection title="Patient Information" description="Select the visit or admission bill you want to work on. Existing visit invoices behave as open bills.">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <Select label="Visit" value={visitId} onChange={(event) => onVisitChange(event.target.value)} error={errors.visitId} required>
               <option value="">Choose patient visit</option>
               {visits.map((visit) => (
                 <option key={visit.id} value={visit.id}>
                   #{visit.id} - {visit.patient.name} - Dr. {visit.doctor.name}
+                  {visit.invoice ? ` - Open Bill ${visit.invoice.invoiceNo}` : ""}
                 </option>
               ))}
             </Select>
@@ -61,26 +86,129 @@ export const InvoiceBillingForm = ({
             <Input label="Doctor Name" placeholder="Selected automatically" value={selectedVisit ? `Dr. ${selectedVisit.doctor.name}` : ""} readOnly />
             <Input label="Date" placeholder="Visit date" value={selectedVisit ? formatDateTime(selectedVisit.scheduledAt) : ""} readOnly />
           </div>
+
+          {existingInvoice ? (
+            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-sm text-amber-900">
+              <p className="font-semibold">Open bill detected: {existingInvoice.invoiceNo}</p>
+              <p className="mt-1">
+                Total {formatCurrency(existingInvoice.total)} | Paid {formatCurrency(existingInvoice.paidAmount)} | Due {formatCurrency(existingInvoice.dueAmount)}
+              </p>
+            </div>
+          ) : null}
         </FormSection>
 
-        <FormSection title="Charges" description="Enter only the essential hospital charges. Amounts are numeric and total is calculated automatically.">
+        <FormSection title="Service Catalog" description="Pick charges from the SIMS price master for labs, X-ray, ultrasound, wards, bed charges, and OT packages.">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {BILLING_CHARGE_FIELDS.map((field) => (
-              <Input
-                key={field.key}
-                label={field.label}
-                placeholder={`Enter ${field.label.toLowerCase()}`}
-                inputMode="decimal"
-                prefix="Rs"
-                value={charges[field.key]}
-                onChange={(event) => onChargeChange(field.key, event.target.value)}
-              />
-            ))}
+            <Select
+              label="Department"
+              value={catalogSelection.department}
+              onChange={(event) =>
+                onCatalogSelectionChange({
+                  ...catalogSelection,
+                  department: event.target.value as CatalogSelection["department"],
+                  itemId: "",
+                })
+              }
+            >
+              <option value="LAB">Labs</option>
+              <option value="XRAY">X-Ray</option>
+              <option value="ULTRASOUND">Ultrasound</option>
+              <option value="OT">OT / Package</option>
+              <option value="BED">Bed Charges</option>
+              <option value="WARD">Ward Procedures</option>
+              <option value="OPD">OPD Charges</option>
+              <option value="IPD">IP Doctor Charges</option>
+            </Select>
+
+            <Select
+              label="Catalog Item"
+              value={catalogSelection.itemId}
+              onChange={(event) => onCatalogSelectionChange({ ...catalogSelection, itemId: event.target.value })}
+            >
+              <option value="">Choose service</option>
+              {catalogItems.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name} - {formatCurrency(item.price)}
+                </option>
+              ))}
+            </Select>
           </div>
-          {errors.charges ? <p className="mt-3 text-sm font-medium text-red-600">{errors.charges}</p> : null}
+
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Button type="button" onClick={onAddCatalogItem} disabled={!catalogSelection.itemId}>
+              Add Catalog Charge
+            </Button>
+            <Button type="button" variant="secondary" onClick={onAddCustomItem}>
+              Add Custom Charge
+            </Button>
+          </div>
         </FormSection>
 
-        <FormSection title="Payment" description="Select the payment mode to complete billing.">
+        <FormSection title="Bill Items" description="This is the open bill area. Add or edit charges freely before collecting payment.">
+          {draftItems.length === 0 ? (
+            <p className="text-sm text-slate-500">No charges added yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {draftItems.map((item) => (
+                <div key={item.id} className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 md:grid-cols-12">
+                  <div className="md:col-span-4">
+                    <Input
+                      label="Charge Name"
+                      value={item.name}
+                      onChange={(event) => onDraftItemChange(item.id, { name: event.target.value })}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Select
+                      label="Category"
+                      value={item.category}
+                      onChange={(event) =>
+                        onDraftItemChange(item.id, {
+                          category: event.target.value as DraftBillingItem["category"],
+                        })
+                      }
+                    >
+                      {itemCategories.map((category) => (
+                        <option key={category} value={category}>
+                          {category}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <Input
+                      label="Qty"
+                      inputMode="decimal"
+                      value={item.qty}
+                      onChange={(event) => onDraftItemChange(item.id, { qty: event.target.value })}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Input
+                      label="Rate"
+                      inputMode="decimal"
+                      prefix="Rs"
+                      value={item.unitPrice}
+                      onChange={(event) => onDraftItemChange(item.id, { unitPrice: event.target.value })}
+                    />
+                  </div>
+                  <div className="md:col-span-2 flex items-end">
+                    <Button type="button" variant="danger" className="w-full" onClick={() => onRemoveDraftItem(item.id)}>
+                      Remove
+                    </Button>
+                  </div>
+                  <div className="md:col-span-12 text-xs text-slate-500">
+                    {item.source ? `Source: ${item.source}` : "Custom charge"} | Line total{" "}
+                    {formatCurrency(Number(item.qty || 0) * Number(item.unitPrice || 0))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {errors.items ? <p className="mt-3 text-sm font-medium text-red-600">{errors.items}</p> : null}
+        </FormSection>
+
+        <FormSection title="Payment" description="Leave paid amount at 0 to keep the bill open and collect later.">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-2">
             <Select
               label="Payment Mode"
@@ -94,7 +222,7 @@ export const InvoiceBillingForm = ({
             </Select>
             <Input
               label="Paid Amount"
-              placeholder="Enter paid amount"
+              placeholder="Enter amount or leave 0"
               inputMode="decimal"
               prefix="Rs"
               value={payment.amount}
@@ -107,18 +235,27 @@ export const InvoiceBillingForm = ({
               value={payment.referenceNo}
               onChange={(event) => onPaymentChange({ ...payment, referenceNo: event.target.value })}
             />
+            <Textarea
+              label="Notes"
+              className="min-h-[88px]"
+              placeholder="Optional open bill note, package note, surgery note, or billing remark"
+              value={notes}
+              onChange={(event) => onNotesChange(event.target.value)}
+            />
           </div>
         </FormSection>
 
-        <FormSection title="Total" description="Total is calculated automatically from the selected charges.">
+        <FormSection title="Total" description="Totals are calculated from the charge lines being added right now.">
           <div className="grid gap-4 md:grid-cols-2">
-            <Input label="Total Amount" placeholder="Calculated automatically" value={formatCurrency(totalAmount)} readOnly />
+            <Input label="Charge Addition Total" placeholder="Calculated automatically" value={formatCurrency(totalAmount)} readOnly />
           </div>
         </FormSection>
 
-        <FormSection title="Actions" description="Generate and print the invoice once all values have been verified.">
+        <FormSection title="Actions" description="Create a new bill or append these charges to the existing open bill.">
           <div className="flex flex-wrap gap-3">
-            <Button type="submit" disabled={saving}>{saving ? "Generating Invoice..." : "Generate Invoice"}</Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving..." : existingInvoice ? "Add Charges to Open Bill" : "Create Open Bill"}
+            </Button>
             <Button variant="secondary" onClick={onReset}>Clear Form</Button>
             {lastCreatedInvoiceId ? (
               <Link to={`/invoices/${lastCreatedInvoiceId}/print`}>

@@ -97,6 +97,22 @@ type InvoiceCreatePayload = {
     amount: number;
     referenceNo?: string;
   }>;
+  notes?: string;
+};
+
+type InvoiceItemsPayload = {
+  items: Array<{
+    category: "CONSULTATION" | "LAB" | "PROCEDURE" | "MEDICINE" | "MISC";
+    name: string;
+    qty: number;
+    unitPrice: number;
+  }>;
+  payments?: Array<{
+    paymentMode: "CASH" | "UPI" | "CARD" | "INSURANCE";
+    amount: number;
+    referenceNo?: string;
+  }>;
+  notes?: string;
 };
 
 type InvoicePaymentsPayload = {
@@ -225,6 +241,8 @@ export const invoiceApi = {
   get: (id: number) => api.get<{ data: Invoice; settings: HospitalSettings }>(`/invoices/${id}`),
   create: (payload: InvoiceCreatePayload) =>
     api.post<{ data: Invoice & { prescription?: { id: number; visitId: number } | null } }>("/invoices", payload),
+  addItems: (id: number, payload: InvoiceItemsPayload) =>
+    api.post<{ data: Invoice }>(`/invoices/${id}/items`, payload),
   addPayments: (id: number, payload: InvoicePaymentsPayload) =>
     api.post<{ data: Invoice }>(`/invoices/${id}/payments`, payload),
 };

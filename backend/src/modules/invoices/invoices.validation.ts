@@ -39,6 +39,12 @@ export const addPaymentSchema = z.object({
   payments: z.array(paymentEntrySchema).min(1),
 });
 
+export const appendInvoiceItemsSchema = z.object({
+  items: z.array(invoiceItemSchema).min(1),
+  payments: z.array(paymentEntrySchema).optional(),
+  notes: z.string().max(500).optional(),
+});
+
 export const listQuerySchema = z.object({
   q: z.string().optional(),
   page: z.string().optional(),
@@ -54,4 +60,5 @@ export const idParamsSchema = z.object({
 
 export type CreateInvoiceInput = z.infer<typeof createInvoiceSchema>;
 export type AddInvoicePaymentsInput = z.infer<typeof addPaymentSchema>;
+export type AppendInvoiceItemsInput = z.infer<typeof appendInvoiceItemsSchema>;
 export type InvoiceListQuery = z.infer<typeof listQuerySchema>;

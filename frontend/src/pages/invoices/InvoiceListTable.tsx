@@ -18,6 +18,7 @@ type InvoiceListTableProps = {
   onReset: () => void;
   onRetry: () => void;
   onCollectPayment: (invoice: InvoiceListItem) => void;
+  onAddCharges: (invoice: InvoiceListItem) => void;
 };
 
 export const InvoiceListTable = ({
@@ -30,6 +31,7 @@ export const InvoiceListTable = ({
   onReset,
   onRetry,
   onCollectPayment,
+  onAddCharges,
 }: InvoiceListTableProps) => {
   const location = useLocation();
   const backTo = `${location.pathname}${location.search}`;
@@ -96,6 +98,9 @@ export const InvoiceListTable = ({
                       <Link to={`/invoices/${invoice.id}/print`} state={{ backTo }}>
                         <Button variant="secondary" className="h-9 px-3 py-1 text-xs">Print Invoice</Button>
                       </Link>
+                      <Button variant="ghost" className="h-9 px-3 py-1 text-xs" onClick={() => onAddCharges(invoice)}>
+                        Add Charges
+                      </Button>
                       {Number(invoice.dueAmount || 0) <= 0 ? (
                         <Link to={`/prescriptions/${invoice.visit?.id}/print`} state={{ backTo }}>
                           <Button variant="ghost" className="h-9 px-3 py-1 text-xs">Print Prescription</Button>
