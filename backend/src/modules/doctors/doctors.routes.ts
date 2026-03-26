@@ -104,6 +104,30 @@ router.get(
   }),
 );
 
+router.get(
+  "/:id",
+  validateParams(idParamsSchema),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as z.infer<typeof idParamsSchema>;
+
+    const doctor = await prisma.user.findFirst({
+      where: {
+        id: Number(id),
+        role: "DOCTOR",
+      },
+      include: {
+        doctorProfile: true,
+      },
+    });
+
+    if (!doctor) {
+      throw new AppError("Doctor not found", 404, "DOCTOR_NOT_FOUND");
+    }
+
+    res.json({ data: doctor });
+  }),
+);
+
 router.post(
   "/",
   authorize("ADMIN"),

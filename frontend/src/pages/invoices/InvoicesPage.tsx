@@ -1,5 +1,4 @@
 import { Link, useLocation, useSearchParams } from "react-router-dom";
-import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import type { ServiceDepartment } from "../../data/serviceCatalog";
@@ -15,6 +14,7 @@ export const InvoicesPage = () => {
   const presetDepartment = (searchParams.get("department") as ServiceDepartment | null) ?? null;
   const presetCatalogItemId = searchParams.get("catalogItemId");
   const backTo = (location.state as { backTo?: string } | null)?.backTo;
+  const source = (location.state as { source?: string } | null)?.source;
   const {
     loading,
     saving,
@@ -60,6 +60,14 @@ export const InvoicesPage = () => {
       <div>
         <h1 className="text-2xl font-semibold">Billing Desk</h1>
         <p className="text-sm text-slate-500">A simplified hospital billing screen designed for reception and billing staff.</p>
+        {source === "opd-visit-created" && selectedVisit ? (
+          <Card className="mt-4 border border-cyan-200 bg-cyan-50/70">
+            <h2 className="text-lg font-semibold text-cyan-900">OPD visit created for {selectedVisit.patient.name}</h2>
+            <p className="mt-1 text-sm text-cyan-800">
+              Continue directly with billing. Once the bill is saved, you can print both the bill and prescription from this screen.
+            </p>
+          </Card>
+        ) : null}
         {backTo ? (
           <div className="mt-3">
             <Link to={backTo}>
@@ -110,13 +118,9 @@ export const InvoicesPage = () => {
             <Link to={`/invoices/${lastCreated.invoiceId}/print`} state={{ backTo: backTo || `${location.pathname}${location.search}` }}>
               <Button>Print Invoice</Button>
             </Link>
-            {lastCreated.dueAmount <= 0 ? (
-              <Link to={`/prescriptions/${lastCreated.visitId}/print`} state={{ backTo: backTo || `${location.pathname}${location.search}` }}>
-                <Button variant="secondary">Print Prescription</Button>
-              </Link>
-            ) : (
-              <Badge tone="warning">Prescription enabled after full payment</Badge>
-            )}
+            <Link to={`/prescriptions/${lastCreated.visitId}/print`} state={{ backTo: backTo || `${location.pathname}${location.search}` }}>
+              <Button variant="secondary">Print Prescription</Button>
+            </Link>
           </div>
         </Card>
       ) : null}

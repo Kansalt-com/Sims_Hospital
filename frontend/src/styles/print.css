@@ -479,6 +479,201 @@
   background: #ffffff;
 }
 
+.sims-rx-sheet {
+  min-height: 297mm;
+  padding: 8mm 8mm 6mm 8mm;
+  color: #1f2937;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.sims-rx-header {
+  border: 1px solid #6b7280;
+  overflow: hidden;
+  line-height: 0;
+}
+
+.sims-rx-header__banner {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.sims-rx-meta {
+  display: grid;
+  grid-template-columns: 1.8fr 1fr;
+  border-left: 1px solid #4b5563;
+  border-right: 1px solid #4b5563;
+  border-bottom: 1px solid #4b5563;
+}
+
+.sims-rx-meta__left {
+  border-right: 1px solid #4b5563;
+}
+
+.sims-rx-meta__left-title {
+  border-bottom: 1px solid #4b5563;
+  padding: 5px 8px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.sims-rx-meta__right {
+  display: grid;
+  grid-template-rows: 1fr auto;
+}
+
+.sims-rx-doctor-box,
+.sims-rx-doctor-placeholder {
+  min-height: 120px;
+  border-bottom: 1px solid #4b5563;
+  padding: 10px 8px 8px;
+  text-align: center;
+}
+
+.sims-rx-doctor-box h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+}
+
+.sims-rx-doctor-box p {
+  margin: 6px 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.sims-rx-doctor-placeholder__line {
+  width: 82%;
+  margin: 12px auto 0;
+  border-bottom: 1px solid #9ca3af;
+}
+
+.sims-rx-doctor-placeholder__line.wide {
+  width: 92%;
+}
+
+.sims-rx-date-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.sims-rx-field-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 8px 0;
+  font-size: 14px;
+}
+
+.sims-rx-field-row--triple {
+  gap: 12px;
+}
+
+.sims-rx-inline-field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.sims-rx-label {
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.sims-rx-unit {
+  white-space: nowrap;
+}
+
+.sims-rx-line {
+  display: inline-flex;
+  align-items: flex-end;
+  min-height: 16px;
+  min-width: 62px;
+  flex: 1;
+  border-bottom: 1px solid #1f2937;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.sims-rx-line.wide {
+  min-width: 220px;
+}
+
+.sims-rx-line.small {
+  min-width: 34px;
+  max-width: 48px;
+}
+
+.sims-rx-line.year {
+  min-width: 68px;
+  max-width: 82px;
+}
+
+.sims-rx-body {
+  position: relative;
+  min-height: 720px;
+  padding: 10px 6px 0 18px;
+}
+
+.sims-rx-rx-mark {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.sims-rx-writing-space {
+  padding-left: 26px;
+}
+
+.sims-rx-writing-line {
+  min-height: 45px;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.sims-rx-writing-line span {
+  display: block;
+  min-height: 24px;
+}
+
+.sims-rx-footer {
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+.sims-rx-footer__rule {
+  border-top: 2px solid #4b5563;
+}
+
+.sims-rx-footer__hindi,
+.sims-rx-footer__english {
+  margin: 6px 0 0;
+  font-size: 12px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.sims-rx-footer__hindi {
+  color: #dc2626;
+}
+
+.sims-rx-footer__english {
+  color: #4b5563;
+}
+
+.doctor-print-only {
+  display: none;
+}
+
 @page {
   margin: 8mm;
   size: A4;
@@ -511,6 +706,19 @@
     margin: 0 !important;
     padding: 0 !important;
   }
+
+  .screen-only {
+    display: none !important;
+  }
+
+  .doctor-print-only {
+    display: block !important;
+  }
+
+  .sims-rx-sheet {
+    padding: 5mm 5mm 4mm;
+    box-shadow: none !important;
+  }
 }
 
 @media (max-width: 900px) {
@@ -520,6 +728,18 @@
 
   .print-brand-header__provider {
     align-items: flex-start;
+  }
+
+  .sims-rx-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .sims-rx-meta__left {
+    border-right: 0;
+  }
+
+  .sims-rx-meta__right {
+    border-top: 1px solid #4b5563;
   }
 }
 
