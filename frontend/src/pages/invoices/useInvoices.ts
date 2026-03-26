@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "../../api/client";
 import { invoiceApi, visitApi } from "../../api/services";
-import { SERVICE_CATALOG, type ServiceCatalogItem, type ServiceDepartment } from "../../data/serviceCatalog";
+import type { ServiceCatalogItem, ServiceDepartment } from "../../data/serviceCatalog";
+import { useServiceCatalog } from "../../hooks/useServiceCatalog";
 import type {
   BillingErrors,
   CatalogSelection,
@@ -39,7 +40,7 @@ const sumDraftItems = (items: DraftBillingItem[]) =>
 const mapDraftItemsToPayload = (items: DraftBillingItem[]) =>
   items
     .map((item) => ({
-      category: item.category,
+      category: item.category === "RADIOLOGY" ? "LAB" : item.category,
       name: item.name.trim(),
       qty: Number(item.qty || 0),
       unitPrice: Number(item.unitPrice || 0),
@@ -52,7 +53,12 @@ export const blankPayment = (): PaymentFormState => ({
   referenceNo: "",
 });
 
-export const useInvoices = (presetVisitId = "") => {
+export const useInvoices = (
+  presetVisitId = "",
+  presetDepartment?: ServiceDepartment | null,
+  presetCatalogItemId?: string | null,
+) => {
+  const { catalog } = useServiceCatalog();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [paymentSaving, setPaymentSaving] = useState<number | null>(null);
@@ -66,7 +72,7 @@ export const useInvoices = (presetVisitId = "") => {
   const [payment, setPayment] = useState<PaymentFormState>(blankPayment());
   const [notes, setNotes] = useState("");
   const [catalogSelection, setCatalogSelection] = useState<CatalogSelection>({
-    department: "LAB",
+    department: presetDepartment ?? "LAB",
     itemId: "",
   });
   const [lastCreated, setLastCreated] = useState<{ invoiceId: number; visitId: number; dueAmount: number } | null>(null);
@@ -103,6 +109,28 @@ export const useInvoices = (presetVisitId = "") => {
     setVisitId(presetVisitId);
   }, [presetVisitId]);
 
+  useEffect(() => {
+    if (!presetDepartment) {
+      return;
+    }
+
+    setCatalogSelection((prev) => ({
+      department: presetDepartment,
+      itemId: prev.department === presetDepartment ? prev.itemId : "",
+    }));
+  }, [presetDepartment]);
+
+  useEffect(() => {
+    if (!presetCatalogItemId) {
+      return;
+    }
+
+    setCatalogSelection((prev) => ({
+      department: prev.department,
+      itemId: presetCatalogItemId,
+    }));
+  }, [presetCatalogItemId]);
+
   const selectedVisit = useMemo(
     () => visits.find((visit) => String(visit.id) === visitId) ?? null,
     [visitId, visits],
@@ -116,14 +144,14 @@ export const useInvoices = (presetVisitId = "") => {
   }, [selectedVisit]);
 
   const catalogItems = useMemo(
-    () => SERVICE_CATALOG.filter((item) => item.department === catalogSelection.department),
-    [catalogSelection.department],
+    () => catalog.filter((item) => item.department === catalogSelection.department),
+    [catalog, catalogSelection.department],
   );
 
   useEffect(() => {
     setCatalogSelection((prev) => ({
       ...prev,
-      itemId: catalogItems[0]?.id ?? "",
+      itemId: catalogItems.some((item) => item.id === prev.itemId) ? prev.itemId : catalogItems[0]?.id ?? "",
     }));
   }, [catalogItems]);
 
@@ -156,6 +184,19 @@ export const useInvoices = (presetVisitId = "") => {
       ];
     });
   }, [selectedVisit]);
+
+  useEffect(() => {
+    if (!presetCatalogItemId || !selectedVisit || draftItems.length > 0) {
+      return;
+    }
+
+    const presetItem = catalog.find((item) => item.id === presetCatalogItemId);
+    if (!presetItem) {
+      return;
+    }
+
+    addCatalogItem(presetItem);
+  }, [presetCatalogItemId, selectedVisit, draftItems.length, catalog]);
 
   const totalAmount = useMemo(() => sumDraftItems(draftItems), [draftItems]);
 
@@ -196,7 +237,10 @@ export const useInvoices = (presetVisitId = "") => {
       ...prev,
       createDraftItem({
         name: catalogItem.name,
-        category: catalogItem.category,
+        category:
+          catalogItem.department === "XRAY" || catalogItem.department === "ULTRASOUND"
+            ? "RADIOLOGY"
+            : catalogItem.category,
         invoiceType: catalogItem.invoiceType,
         qty: "1",
         unitPrice: String(catalogItem.price),
@@ -257,7 +301,7 @@ export const useInvoices = (presetVisitId = "") => {
           })
         : await invoiceApi.create({
             visitId: Number(visitId),
-            invoiceType: items.some((item) => item.category === "LAB")
+            invoiceType: draftItems.some((item) => item.category === "LAB" || item.category === "RADIOLOGY")
               ? "LAB"
               : selectedVisit.type === "IPD"
                 ? "IPD"

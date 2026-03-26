@@ -38,6 +38,7 @@ export const PatientsPage = () => {
   const [rows, setRows] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [genderFilter, setGenderFilter] = useState<"ALL" | Patient["gender"]>("ALL");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [formOpen, setFormOpen] = useState(false);
@@ -46,6 +47,10 @@ export const PatientsPage = () => {
   const [form, setForm] = useState<PatientForm>(defaultForm);
 
   const canEdit = useMemo(() => user?.role === "ADMIN" || user?.role === "RECEPTION", [user?.role]);
+  const filteredRows = useMemo(
+    () => rows.filter((row) => (genderFilter === "ALL" ? true : row.gender === genderFilter)),
+    [rows, genderFilter],
+  );
 
   const load = async (nextPage = page, query = search) => {
     setLoading(true);
@@ -156,9 +161,16 @@ export const PatientsPage = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          <Select value={genderFilter} onChange={(e) => setGenderFilter(e.target.value as "ALL" | Patient["gender"])}>
+            <option value="ALL">All Gender</option>
+            <option value="MALE">Male</option>
+            <option value="FEMALE">Female</option>
+            <option value="OTHER">Other</option>
+          </Select>
           <Button onClick={() => load(1, search)}>Search</Button>
           <Button variant="secondary" onClick={() => {
             setSearch("");
+            setGenderFilter("ALL");
             load(1, "");
           }}>
             Reset
@@ -237,7 +249,7 @@ export const PatientsPage = () => {
       <Card>
         {loading ? (
           <Loader />
-        ) : rows.length === 0 ? (
+        ) : filteredRows.length === 0 ? (
           <EmptyState text="No patients found." />
         ) : (
           <div className="overflow-x-auto">
@@ -253,7 +265,7 @@ export const PatientsPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
+                {filteredRows.map((row) => (
                   <tr key={row.id} className="border-b border-slate-100">
                     <td className="py-3 font-medium">{row.mrn}</td>
                     <td className="py-3">{row.name}</td>
