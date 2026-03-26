@@ -2,6 +2,7 @@ import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
+import type { ServiceDepartment } from "../../data/serviceCatalog";
 import { InvoiceBillingForm } from "./InvoiceBillingForm";
 import { InvoiceListTable } from "./InvoiceListTable";
 import { PaymentModal } from "./PaymentModal";
@@ -11,6 +12,7 @@ export const InvoicesPage = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const presetVisitId = searchParams.get("visitId") || "";
+  const presetDepartment = (searchParams.get("department") as ServiceDepartment | null) ?? null;
   const backTo = (location.state as { backTo?: string } | null)?.backTo;
   const {
     loading,
@@ -50,7 +52,7 @@ export const InvoicesPage = () => {
     closePaymentModal,
     savePayment,
     isNumeric,
-  } = useInvoices(presetVisitId);
+  } = useInvoices(presetVisitId, presetDepartment);
 
   return (
     <div className="space-y-6">
