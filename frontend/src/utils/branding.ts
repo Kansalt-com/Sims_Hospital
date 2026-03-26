@@ -7,6 +7,9 @@ const normalizeBasePath = (value?: string | null) => {
   return withLeadingSlash.endsWith("/") ? withLeadingSlash.slice(0, -1) : withLeadingSlash;
 };
 
+const isLocalDevUrl = (value?: string | null) =>
+  Boolean(value && /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(value));
+
 export const buildPublicAssetPath = (assetPath: string) => {
   const basePath = normalizeBasePath(import.meta.env.BASE_URL);
   const normalizedAssetPath = assetPath.startsWith("/") ? assetPath.slice(1) : assetPath;
@@ -28,7 +31,10 @@ export const buildAssetUrl = (pathValue?: string | null, version?: string | numb
 
   const appBasePath = normalizeBasePath(import.meta.env.BASE_URL);
   const defaultBaseUrl = typeof window !== "undefined" ? `${window.location.origin}${appBasePath}` : "";
-  const baseUrl = import.meta.env.VITE_UPLOAD_BASE_URL || defaultBaseUrl;
+  const baseUrl =
+    import.meta.env.VITE_UPLOAD_BASE_URL && !isLocalDevUrl(import.meta.env.VITE_UPLOAD_BASE_URL)
+      ? import.meta.env.VITE_UPLOAD_BASE_URL
+      : defaultBaseUrl;
   const normalizedPath = pathValue.startsWith("/") ? pathValue : `/${pathValue}`;
   const url = `${baseUrl}${normalizedPath}`;
   if (!version) {

@@ -8,6 +8,9 @@ const normalizeBasePath = (value?: string) => {
   return value.endsWith("/") ? value.slice(0, -1) : value;
 };
 
+const isLocalDevUrl = (value?: string) =>
+  Boolean(value && /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(value));
+
 type ApiErrorPayload = {
   error?: boolean;
   message?: string;
@@ -15,7 +18,7 @@ type ApiErrorPayload = {
 };
 
 const getRuntimeBase = () => {
-  if (import.meta.env.VITE_API_BASE_URL) {
+  if (import.meta.env.VITE_API_BASE_URL && (import.meta.env.DEV || !isLocalDevUrl(import.meta.env.VITE_API_BASE_URL))) {
     return import.meta.env.VITE_API_BASE_URL;
   }
 
