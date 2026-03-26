@@ -40,7 +40,7 @@ const sumDraftItems = (items: DraftBillingItem[]) =>
 const mapDraftItemsToPayload = (items: DraftBillingItem[]) =>
   items
     .map((item) => ({
-      category: item.category,
+      category: item.category === "RADIOLOGY" ? "LAB" : item.category,
       name: item.name.trim(),
       qty: Number(item.qty || 0),
       unitPrice: Number(item.unitPrice || 0),
@@ -53,7 +53,11 @@ export const blankPayment = (): PaymentFormState => ({
   referenceNo: "",
 });
 
-export const useInvoices = (presetVisitId = "", presetDepartment?: ServiceDepartment | null) => {
+export const useInvoices = (
+  presetVisitId = "",
+  presetDepartment?: ServiceDepartment | null,
+  presetCatalogItemId?: string | null,
+) => {
   const { catalog } = useServiceCatalog();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -116,6 +120,17 @@ export const useInvoices = (presetVisitId = "", presetDepartment?: ServiceDepart
     }));
   }, [presetDepartment]);
 
+  useEffect(() => {
+    if (!presetCatalogItemId) {
+      return;
+    }
+
+    setCatalogSelection((prev) => ({
+      department: prev.department,
+      itemId: presetCatalogItemId,
+    }));
+  }, [presetCatalogItemId]);
+
   const selectedVisit = useMemo(
     () => visits.find((visit) => String(visit.id) === visitId) ?? null,
     [visitId, visits],
@@ -136,7 +151,7 @@ export const useInvoices = (presetVisitId = "", presetDepartment?: ServiceDepart
   useEffect(() => {
     setCatalogSelection((prev) => ({
       ...prev,
-      itemId: catalogItems[0]?.id ?? "",
+      itemId: catalogItems.some((item) => item.id === prev.itemId) ? prev.itemId : catalogItems[0]?.id ?? "",
     }));
   }, [catalogItems]);
 
@@ -169,6 +184,19 @@ export const useInvoices = (presetVisitId = "", presetDepartment?: ServiceDepart
       ];
     });
   }, [selectedVisit]);
+
+  useEffect(() => {
+    if (!presetCatalogItemId || !selectedVisit || draftItems.length > 0) {
+      return;
+    }
+
+    const presetItem = catalog.find((item) => item.id === presetCatalogItemId);
+    if (!presetItem) {
+      return;
+    }
+
+    addCatalogItem(presetItem);
+  }, [presetCatalogItemId, selectedVisit, draftItems.length, catalog]);
 
   const totalAmount = useMemo(() => sumDraftItems(draftItems), [draftItems]);
 
@@ -209,7 +237,10 @@ export const useInvoices = (presetVisitId = "", presetDepartment?: ServiceDepart
       ...prev,
       createDraftItem({
         name: catalogItem.name,
-        category: catalogItem.category,
+        category:
+          catalogItem.department === "XRAY" || catalogItem.department === "ULTRASOUND"
+            ? "RADIOLOGY"
+            : catalogItem.category,
         invoiceType: catalogItem.invoiceType,
         qty: "1",
         unitPrice: String(catalogItem.price),
@@ -270,7 +301,7 @@ export const useInvoices = (presetVisitId = "", presetDepartment?: ServiceDepart
           })
         : await invoiceApi.create({
             visitId: Number(visitId),
-            invoiceType: items.some((item) => item.category === "LAB")
+            invoiceType: draftItems.some((item) => item.category === "LAB" || item.category === "RADIOLOGY")
               ? "LAB"
               : selectedVisit.type === "IPD"
                 ? "IPD"

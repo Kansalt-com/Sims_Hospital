@@ -6,7 +6,7 @@ export type ServiceCatalogItem = {
   name: string;
   price: number;
   invoiceType: "OPD" | "IPD" | "PHARMACY" | "LAB" | "GENERAL";
-  category: "CONSULTATION" | "LAB" | "PROCEDURE" | "MEDICINE" | "MISC";
+  category: "CONSULTATION" | "LAB" | "RADIOLOGY" | "PROCEDURE" | "MEDICINE" | "MISC";
   source: string;
   editablePrice?: boolean;
   costBreakup?: string[];

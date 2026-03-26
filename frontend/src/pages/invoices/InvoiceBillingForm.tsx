@@ -41,7 +41,16 @@ type InvoiceBillingFormProps = {
   onReset: () => void;
 };
 
-const itemCategories = ["CONSULTATION", "LAB", "PROCEDURE", "MEDICINE", "MISC"] as const;
+const itemCategories = ["CONSULTATION", "LAB", "RADIOLOGY", "PROCEDURE", "MEDICINE", "MISC"] as const;
+
+const categoryLabels: Record<(typeof itemCategories)[number], string> = {
+  CONSULTATION: "Consultation",
+  LAB: "Labs",
+  RADIOLOGY: "Radiology",
+  PROCEDURE: "Procedure",
+  MEDICINE: "Medicine",
+  MISC: "Misc",
+};
 
 export const InvoiceBillingForm = ({
   visitId,
@@ -170,7 +179,7 @@ export const InvoiceBillingForm = ({
                     >
                       {itemCategories.map((category) => (
                         <option key={category} value={category}>
-                          {category}
+                          {categoryLabels[category]}
                         </option>
                       ))}
                     </Select>

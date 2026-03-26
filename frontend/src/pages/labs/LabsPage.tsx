@@ -42,7 +42,7 @@ export const LabsPage = () => {
       name: form.name.trim(),
       price: Number(form.price || 0),
       invoiceType: "LAB",
-      category: "LAB",
+      category: form.department === "XRAY" || form.department === "ULTRASOUND" ? "RADIOLOGY" : "LAB",
       source: "Labs Module",
       editablePrice: form.editablePrice,
       costBreakup: [],

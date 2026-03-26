@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { doctorApi } from "../../api/services";
 import { getErrorMessage } from "../../api/client";
@@ -31,6 +31,7 @@ export const DoctorsPage = () => {
   const [rows, setRows] = useState<DoctorRow[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
   const [form, setForm] = useState(emptyForm);
 
   const load = async (search = query) => {
@@ -113,15 +114,15 @@ export const DoctorsPage = () => {
     }
   };
 
-  const uploadSignature = async (row: DoctorRow, file: File) => {
-    try {
-      await doctorApi.uploadSignature(row.id, file);
-      toast.success("Signature uploaded");
-      await load();
-    } catch (error) {
-      toast.error(getErrorMessage(error));
-    }
-  };
+  const filteredRows = useMemo(
+    () =>
+      rows.filter((row) => {
+        if (statusFilter === "ACTIVE") return row.active;
+        if (statusFilter === "INACTIVE") return !row.active;
+        return true;
+      }),
+    [rows, statusFilter],
+  );
 
   return (
     <div className="space-y-5">
@@ -161,8 +162,17 @@ export const DoctorsPage = () => {
       <Card>
         <div className="mb-3 flex gap-2">
           <Input className="max-w-sm" placeholder="Search doctor / specialization" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <select
+            className="rounded-[6px] border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as "ALL" | "ACTIVE" | "INACTIVE")}
+          >
+            <option value="ALL">All Status</option>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+          </select>
           <Button onClick={() => load(query)}>Search</Button>
-          <Button variant="secondary" onClick={() => { setQuery(""); load(""); }}>Reset</Button>
+          <Button variant="secondary" onClick={() => { setQuery(""); setStatusFilter("ALL"); load(""); }}>Reset</Button>
         </div>
 
         {loading ? <Loader /> : (
@@ -180,7 +190,7 @@ export const DoctorsPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
+                {filteredRows.map((row) => (
                   <tr key={row.id} className="border-b border-slate-100">
                     <td className="py-3">
                       <p className="font-medium">{row.name}</p>
@@ -195,19 +205,6 @@ export const DoctorsPage = () => {
                       <div className="flex flex-wrap gap-2">
                         <Button variant="ghost" className="h-9 px-3 py-1 text-xs" onClick={() => startEdit(row)}>Edit</Button>
                         <Button variant="secondary" className="h-9 px-3 py-1 text-xs" onClick={() => toggleStatus(row)}>{row.active ? "Disable" : "Enable"}</Button>
-                        <label className="inline-flex min-h-[38px] cursor-pointer items-center justify-center rounded-[6px] border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:-translate-y-px hover:border-slate-300 hover:bg-slate-50">
-                          Upload Signature
-                          <input
-                            type="file"
-                            className="hidden"
-                            accept=".png,.jpg,.jpeg,image/png,image/jpeg"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) uploadSignature(row, file);
-                              e.currentTarget.value = "";
-                            }}
-                          />
-                        </label>
                       </div>
                     </td>
                   </tr>

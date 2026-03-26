@@ -2,6 +2,7 @@ import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
 import { Select } from "../../components/ui/Select";
+import { useServiceCatalog } from "../../hooks/useServiceCatalog";
 import type { DoctorOption, PatientOption, VisitFormState } from "./visitTypes";
 
 type VisitRegistrationFormProps = {
@@ -25,6 +26,11 @@ export const VisitRegistrationForm = ({
   onFormChange,
   onSubmit,
 }: VisitRegistrationFormProps) => {
+  const { catalog } = useServiceCatalog();
+  const labServices = catalog.filter(
+    (item) => item.department === "LAB" || item.department === "XRAY" || item.department === "ULTRASOUND",
+  );
+
   return (
     <Card className="rounded-[28px]">
       <h2 className="mb-4 text-lg font-semibold">Create OPD Visit</h2>
@@ -50,34 +56,59 @@ export const VisitRegistrationForm = ({
           <Input label="New Patient Name" value={form.newName} onChange={(e) => onFormChange({ ...form, newName: e.target.value })} required />
         )}
 
-        <Select
-          label={form.visitPurpose === "LAB_ONLY" ? "Referring Doctor" : "Doctor"}
-          value={form.doctorId}
-          onChange={(e) => onFormChange({ ...form, doctorId: e.target.value })}
-          required
-        >
-          <option value="">Assign doctor</option>
-          {doctors.map((doctor) => (
-            <option key={doctor.id} value={doctor.id}>{doctor.name}</option>
-          ))}
-        </Select>
+        {form.visitPurpose === "CONSULTATION" ? (
+          <Select
+            label="Doctor"
+            value={form.doctorId}
+            onChange={(e) => onFormChange({ ...form, doctorId: e.target.value })}
+            required
+          >
+            <option value="">Assign doctor</option>
+            {doctors.map((doctor) => (
+              <option key={doctor.id} value={doctor.id}>{doctor.name}</option>
+            ))}
+          </Select>
+        ) : (
+          <Select
+            label="Labs / Radiology"
+            value={form.selectedCatalogItemId}
+            onChange={(e) => {
+              const selectedItem = labServices.find((item) => item.id === e.target.value);
+              onFormChange({
+                ...form,
+                selectedCatalogItemId: e.target.value,
+                reason: selectedItem?.name ?? "",
+                consultationFee: selectedItem ? String(selectedItem.price) : "0",
+              });
+            }}
+            required
+          >
+            <option value="">Choose service</option>
+            {labServices.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name} - Rs {item.price.toFixed(2)}
+              </option>
+            ))}
+          </Select>
+        )}
 
         <Input
-          label={form.visitPurpose === "LAB_ONLY" ? "Lab Visit Fee" : "Consultation Fee"}
+          label={form.visitPurpose === "LAB_ONLY" ? "Selected Service Cost" : "Consultation Fee"}
           type="number"
           min={0}
           prefix="Rs"
-          value={form.visitPurpose === "LAB_ONLY" ? "0" : form.consultationFee}
+          value={form.visitPurpose === "LAB_ONLY" ? form.consultationFee : form.consultationFee}
           onChange={(e) => onFormChange({ ...form, consultationFee: e.target.value })}
-          disabled={form.visitPurpose === "LAB_ONLY"}
+          disabled={form.visitPurpose === "LAB_ONLY" && Boolean(form.selectedCatalogItemId)}
           required={form.visitPurpose !== "LAB_ONLY"}
         />
         <Input label="Scheduled Date" type="date" value={form.scheduledAt} onChange={(e) => onFormChange({ ...form, scheduledAt: e.target.value })} />
         <Input
           label="Reason"
-          placeholder={form.visitPurpose === "LAB_ONLY" ? "Example: CBC, LFT, Thyroid panel" : undefined}
+          placeholder={form.visitPurpose === "LAB_ONLY" ? "Selected automatically from lab service" : undefined}
           value={form.reason}
           onChange={(e) => onFormChange({ ...form, reason: e.target.value })}
+          readOnly={form.visitPurpose === "LAB_ONLY"}
         />
 
         {patientMode === "new" ? (

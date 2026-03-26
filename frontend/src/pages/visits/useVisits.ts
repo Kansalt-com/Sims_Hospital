@@ -12,6 +12,7 @@ const initialVisitForm: VisitFormState = {
   visitPurpose: "CONSULTATION",
   patientId: "",
   doctorId: "",
+  selectedCatalogItemId: "",
   consultationFee: "500",
   reason: "",
   scheduledAt: "",
@@ -98,9 +99,12 @@ export const useVisits = () => {
     setSaving(true);
     try {
       const payload = {
-        doctorId: Number(form.doctorId),
+        doctorId: Number(form.doctorId || doctors[0]?.id || 0),
         consultationFee: form.visitPurpose === "LAB_ONLY" ? 0 : Number(form.consultationFee || 0),
-        reason: form.visitPurpose === "LAB_ONLY" ? form.reason || "Lab billing only" : form.reason,
+        reason:
+          form.visitPurpose === "LAB_ONLY"
+            ? `LAB_ONLY::${form.selectedCatalogItemId || "manual"}::${form.reason || "Lab billing only"}`
+            : form.reason,
         type: "OPD" as const,
         scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : undefined,
         ...(patientMode === "existing"
@@ -122,6 +126,9 @@ export const useVisits = () => {
       setForm((prev) => ({
         ...prev,
         visitPurpose: "CONSULTATION",
+        doctorId: "",
+        selectedCatalogItemId: "",
+        consultationFee: "500",
         reason: "",
         scheduledAt: "",
         patientId: "",

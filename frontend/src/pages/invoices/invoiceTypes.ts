@@ -22,7 +22,7 @@ export type InvoiceListItem = Invoice;
 export type DraftBillingItem = {
   id: string;
   name: string;
-  category: "CONSULTATION" | "LAB" | "PROCEDURE" | "MEDICINE" | "MISC";
+  category: "CONSULTATION" | "LAB" | "RADIOLOGY" | "PROCEDURE" | "MEDICINE" | "MISC";
   invoiceType: "OPD" | "IPD" | "PHARMACY" | "LAB" | "GENERAL";
   qty: string;
   unitPrice: string;

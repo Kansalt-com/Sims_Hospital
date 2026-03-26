@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -5,6 +6,7 @@ import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Input } from "../../components/ui/Input";
 import { Loader } from "../../components/ui/Loader";
+import { Select } from "../../components/ui/Select";
 import { formatCurrency, formatDateTime } from "../../utils/format";
 import type { InvoiceListItem } from "./invoiceTypes";
 
@@ -35,6 +37,17 @@ export const InvoiceListTable = ({
 }: InvoiceListTableProps) => {
   const location = useLocation();
   const backTo = `${location.pathname}${location.search}`;
+  const [typeFilter, setTypeFilter] = useState<"ALL" | InvoiceListItem["invoiceType"]>("ALL");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | InvoiceListItem["paymentStatus"]>("ALL");
+  const filteredInvoices = useMemo(
+    () =>
+      invoices.filter((invoice) => {
+        const typeMatch = typeFilter === "ALL" ? true : invoice.invoiceType === typeFilter;
+        const statusMatch = statusFilter === "ALL" ? true : invoice.paymentStatus === statusFilter;
+        return typeMatch && statusMatch;
+      }),
+    [invoices, typeFilter, statusFilter],
+  );
 
   return (
     <Card>
@@ -46,9 +59,23 @@ export const InvoiceListTable = ({
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
         />
+        <Select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as "ALL" | InvoiceListItem["invoiceType"])}>
+          <option value="ALL">All Types</option>
+          <option value="OPD">OPD</option>
+          <option value="IPD">IPD</option>
+          <option value="LAB">Labs</option>
+          <option value="GENERAL">General</option>
+          <option value="PHARMACY">Pharmacy</option>
+        </Select>
+        <Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "ALL" | InvoiceListItem["paymentStatus"])}>
+          <option value="ALL">All Status</option>
+          <option value="PENDING">Pending</option>
+          <option value="PARTIAL">Partial</option>
+          <option value="PAID">Paid</option>
+        </Select>
         <div className="flex items-end gap-2">
           <Button onClick={onSearch}>Search</Button>
-          <Button variant="secondary" onClick={onReset}>Reset</Button>
+          <Button variant="secondary" onClick={() => { setTypeFilter("ALL"); setStatusFilter("ALL"); onReset(); }}>Reset</Button>
         </div>
       </div>
 
@@ -59,7 +86,7 @@ export const InvoiceListTable = ({
           text={pageError}
           action={<Button onClick={onRetry}>Retry</Button>}
         />
-      ) : invoices.length === 0 ? (
+      ) : filteredInvoices.length === 0 ? (
         <EmptyState text="No invoices found." />
       ) : (
         <div className="overflow-x-auto">
@@ -75,9 +102,9 @@ export const InvoiceListTable = ({
                 <th className="py-2">Status</th>
                 <th className="py-2">Actions</th>
               </tr>
-            </thead>
-            <tbody>
-              {invoices.map((invoice) => (
+              </thead>
+              <tbody>
+              {filteredInvoices.map((invoice) => (
                 <tr key={invoice.id} className="border-b border-slate-100 align-top">
                   <td className="py-3 font-medium">{invoice.invoiceNo}</td>
                   <td className="py-3">

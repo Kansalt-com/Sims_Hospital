@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useServiceCatalog } from "../../hooks/useServiceCatalog";
 import { IPDTransferPanel } from "./IPDTransferPanel";
 import { VisitQueueTable } from "./VisitQueueTable";
 import { VisitRegistrationForm } from "./VisitRegistrationForm";
@@ -6,6 +7,7 @@ import { useVisits } from "./useVisits";
 
 export const VisitsPage = () => {
   const navigate = useNavigate();
+  const { catalog } = useServiceCatalog();
   const {
     rows,
     doctors,
@@ -67,9 +69,22 @@ export const VisitsPage = () => {
         onRetry={() => load(query)}
         onChangeStatus={changeStatus}
         onCreateBill={(visit) =>
-          navigate(`/invoices?visitId=${visit.id}${visit.consultationFee <= 0 ? "&department=LAB" : ""}`, {
-            state: { backTo: "/visits" },
-          })
+          {
+            const labOnlyMatch = visit.reason?.match(/^LAB_ONLY::([^:]+)::(.*)$/);
+            const selectedItemId = labOnlyMatch?.[1];
+            const selectedItem = catalog.find((item) => item.id === selectedItemId);
+            const department =
+              selectedItem?.department === "XRAY" || selectedItem?.department === "ULTRASOUND"
+                ? selectedItem.department
+                : "LAB";
+
+            navigate(
+              `/invoices?visitId=${visit.id}${visit.consultationFee <= 0 ? `&department=${department}${selectedItemId ? `&catalogItemId=${selectedItemId}` : ""}` : ""}`,
+              {
+                state: { backTo: "/visits" },
+              },
+            );
+          }
         }
         onPrintBill={(invoiceId) => navigate(`/invoices/${invoiceId}/print`, { state: { backTo: "/visits" } })}
         onPrescription={(visitId) => navigate(`/prescriptions/${visitId}/print`, { state: { backTo: "/visits" } })}

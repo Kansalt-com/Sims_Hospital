@@ -13,6 +13,7 @@ export const InvoicesPage = () => {
   const [searchParams] = useSearchParams();
   const presetVisitId = searchParams.get("visitId") || "";
   const presetDepartment = (searchParams.get("department") as ServiceDepartment | null) ?? null;
+  const presetCatalogItemId = searchParams.get("catalogItemId");
   const backTo = (location.state as { backTo?: string } | null)?.backTo;
   const {
     loading,
@@ -52,7 +53,7 @@ export const InvoicesPage = () => {
     closePaymentModal,
     savePayment,
     isNumeric,
-  } = useInvoices(presetVisitId, presetDepartment);
+  } = useInvoices(presetVisitId, presetDepartment, presetCatalogItemId);
 
   return (
     <div className="space-y-6">
