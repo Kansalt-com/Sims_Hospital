@@ -22,7 +22,7 @@ export const PrescriptionPage = () => {
     setLoading(true);
     try {
       const res = await visitApi.list({ page: 1, pageSize: 100, date: today, type: "OPD", q: search });
-      const eligible = res.data.data.filter((visit) => visit.invoice && Number(visit.invoice.dueAmount || 0) <= 0);
+      const eligible = res.data.data.filter((visit) => visit.invoice);
       setRows(eligible);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -39,7 +39,7 @@ export const PrescriptionPage = () => {
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-semibold">Prescription Sheets</h1>
-        <p className="text-sm text-slate-500">Auto-generated after billing is fully paid. Designed for manual doctor handwriting after print.</p>
+        <p className="text-sm text-slate-500">Available once an OPD bill exists. Designed for quick print or download after billing.</p>
       </div>
 
       <Card>
@@ -49,7 +49,7 @@ export const PrescriptionPage = () => {
           <Button variant="secondary" onClick={() => { setQuery(""); load(""); }}>Reset</Button>
         </div>
 
-        {loading ? <Loader /> : rows.length === 0 ? <EmptyState text="No bill-cleared visits found for prescription printing." /> : (
+        {loading ? <Loader /> : rows.length === 0 ? <EmptyState text="No billed OPD visits found for prescription printing." /> : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
               <thead>
@@ -78,12 +78,12 @@ export const PrescriptionPage = () => {
                       <p className="text-xs text-slate-500">{row.doctor?.doctorProfile?.qualification || ""}</p>
                     </td>
                     <td className="py-3">
-                      <Badge tone={Number(row.invoice?.dueAmount || 0) <= 0 ? "success" : "warning"}>
-                        {Number(row.invoice?.dueAmount || 0) <= 0 ? "Paid" : "Pending"}
+                      <Badge tone="success">
+                        Bill Available
                       </Badge>
                     </td>
                     <td className="py-3">
-                      <Badge tone={row.prescription ? "success" : "default"}>{row.prescription ? "Generated" : "Auto on billing"}</Badge>
+                      <Badge tone={row.prescription ? "success" : "default"}>{row.prescription ? "Generated" : "Ready to Print"}</Badge>
                     </td>
                     <td className="py-3">
                       <div className="flex gap-2">

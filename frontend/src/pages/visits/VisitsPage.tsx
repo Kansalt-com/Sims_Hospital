@@ -28,7 +28,6 @@ export const VisitsPage = () => {
     availableBeds,
     load,
     createVisit,
-    changeStatus,
     openTransfer,
     transferToIpd,
     closeTransfer,
@@ -51,7 +50,12 @@ export const VisitsPage = () => {
         onFormChange={setForm}
         onSubmit={async (event) => {
           event.preventDefault();
-          await createVisit();
+          const createdVisit = await createVisit();
+          if (createdVisit) {
+            navigate(`/invoices?visitId=${createdVisit.id}`, {
+              state: { backTo: "/visits", source: "opd-visit-created" },
+            });
+          }
         }}
       />
 
@@ -67,7 +71,6 @@ export const VisitsPage = () => {
           load("");
         }}
         onRetry={() => load(query)}
-        onChangeStatus={changeStatus}
         onCreateBill={(visit) =>
           {
             const labOnlyMatch = visit.reason?.match(/^LAB_ONLY::([^:]+)::(.*)$/);

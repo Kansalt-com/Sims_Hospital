@@ -154,6 +154,7 @@ export const doctorApi = {
         q: params?.q,
       },
     }),
+  get: (id: number) => api.get<{ data: User & { doctorProfile?: DoctorProfile | null } }>(`/doctors/${id}`),
   create: (payload: DoctorPayload) => api.post("/doctors", payload),
   update: (id: number, payload: UpdateDoctorPayload) => api.patch(`/doctors/${id}`, payload),
   uploadSignature: (id: number, file: File) => {

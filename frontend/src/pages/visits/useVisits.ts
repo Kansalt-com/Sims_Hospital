@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "../../api/client";
 import { doctorApi, patientApi, roomApi, visitApi } from "../../api/services";
+import type { Visit } from "../../types";
 import type { Bed, Room } from "../../types";
 import type { DoctorOption, PatientOption, TransferFormState, VisitFormState, VisitQueueItem } from "./visitTypes";
 
@@ -95,7 +96,7 @@ export const useVisits = () => {
     }));
   }, [selectedTransferRoom, transferForm.bedId, availableBeds]);
 
-  const createVisit = async () => {
+  const createVisit = async (): Promise<Visit | null> => {
     setSaving(true);
     try {
       const payload = {
@@ -121,7 +122,7 @@ export const useVisits = () => {
             }),
       };
 
-      await visitApi.create(payload);
+      const response = await visitApi.create(payload);
       toast.success("OPD visit created");
       setForm((prev) => ({
         ...prev,
@@ -139,20 +140,12 @@ export const useVisits = () => {
         newIdProof: "",
       }));
       await load();
+      return response.data.data;
     } catch (error) {
       toast.error(getErrorMessage(error));
+      return null;
     } finally {
       setSaving(false);
-    }
-  };
-
-  const changeStatus = async (visitId: number, status: string) => {
-    try {
-      await visitApi.updateStatus(visitId, status);
-      toast.success("Status updated");
-      await load();
-    } catch (error) {
-      toast.error(getErrorMessage(error));
     }
   };
 
@@ -216,7 +209,6 @@ export const useVisits = () => {
     availableBeds,
     load,
     createVisit,
-    changeStatus,
     openTransfer,
     transferToIpd,
     closeTransfer: () => setTransferVisitId(null),

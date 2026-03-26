@@ -18,7 +18,6 @@ type VisitQueueTableProps = {
   onSearch: () => void;
   onReset: () => void;
   onRetry: () => void;
-  onChangeStatus: (visitId: number, status: string) => void;
   onCreateBill: (visit: VisitQueueItem) => void;
   onPrintBill: (invoiceId: number) => void;
   onPrescription: (visitId: number) => void;
@@ -34,7 +33,6 @@ export const VisitQueueTable = ({
   onSearch,
   onReset,
   onRetry,
-  onChangeStatus,
   onCreateBill,
   onPrintBill,
   onPrescription,
@@ -93,7 +91,6 @@ export const VisitQueueTable = ({
                 <th className="py-2">Fee</th>
                 <th className="py-2">Billing</th>
                 <th className="py-2">Date</th>
-                <th className="py-2">Status</th>
                 <th className="py-2">Actions</th>
               </tr>
               </thead>
@@ -118,18 +115,13 @@ export const VisitQueueTable = ({
                   </td>
                   <td className="py-3">{formatDate(row.scheduledAt)}</td>
                   <td className="py-3">
-                    <Badge tone={row.status === "COMPLETED" ? "success" : row.status === "IN_PROGRESS" ? "warning" : "default"}>{row.status}</Badge>
-                  </td>
-                  <td className="py-3">
                     <div className="flex flex-wrap gap-2">
-                      {row.status !== "IN_PROGRESS" ? <Button className="h-8 px-3 py-1 text-xs" variant="ghost" onClick={() => onChangeStatus(row.id, "IN_PROGRESS")}>Start</Button> : null}
-                      {row.status !== "COMPLETED" ? <Button className="h-8 px-3 py-1 text-xs" variant="ghost" onClick={() => onChangeStatus(row.id, "COMPLETED")}>Complete</Button> : null}
                       {row.invoice ? (
                         <Button className="h-8 px-3 py-1 text-xs" variant="secondary" onClick={() => onPrintBill(row.invoice!.id)}>Print Bill</Button>
                       ) : (
-                        <Button className="h-8 px-3 py-1 text-xs" variant="secondary" onClick={() => onCreateBill(row)}>Create Bill</Button>
+                        <Button className="h-8 px-3 py-1 text-xs" variant="secondary" onClick={() => onCreateBill(row)}>Billing</Button>
                       )}
-                      {row.invoice && Number(row.invoice.dueAmount || 0) <= 0 ? (
+                      {row.invoice ? (
                         <Button className="h-8 px-3 py-1 text-xs" variant="ghost" onClick={() => onPrescription(row.id)}>Prescription</Button>
                       ) : null}
                       {!row.opdToIpdTransfer ? (
