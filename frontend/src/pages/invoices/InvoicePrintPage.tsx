@@ -9,6 +9,7 @@ import { BillLayout } from "../../components/print/BillLayout";
 import type { BillSection } from "../../components/print/BillTable";
 import { Button } from "../../components/ui/Button";
 import { Loader } from "../../components/ui/Loader";
+import { useServiceCatalog } from "../../hooks/useServiceCatalog";
 import type { HospitalSettings, Invoice, InvoiceItem } from "../../types";
 import { formatCurrency, formatDate, formatDateTime } from "../../utils/format";
 import "../../styles/print.css";
@@ -111,17 +112,18 @@ const getItemHead = (item: InvoiceItem, sectionKey: (typeof billSectionOrder)[nu
   return "Ward Procedure / Services";
 };
 
-const buildSections = (invoice: Invoice): BillSection[] => {
+const buildSections = (invoice: Invoice, costBreakupMap: Map<string, string[]>): BillSection[] => {
   const grouped = new Map<(typeof billSectionOrder)[number], BillSection["items"]>();
   const rowDate = formatChargeDate(invoice.visit.ipdAdmission?.admittedAt || invoice.visit.scheduledAt || invoice.createdAt);
 
   for (const item of invoice.items) {
     const sectionKey = getSectionKey(item);
     const bucket = grouped.get(sectionKey) ?? [];
+    const costBreakup = costBreakupMap.get(normalize(item.name)) ?? [];
     bucket.push({
       chargeDate: rowDate,
       head: getItemHead(item, sectionKey),
-      description: item.name,
+      description: costBreakup.length ? `${item.name} (${costBreakup.join(", ")})` : item.name,
       rate: formatNumber(item.unitPrice),
       qty: formatNumber(item.qty),
       amount: formatNumber(item.amount || item.unitPrice * item.qty),
@@ -137,6 +139,7 @@ const buildSections = (invoice: Invoice): BillSection[] => {
 };
 
 export const InvoicePrintPage = () => {
+  const { catalog } = useServiceCatalog();
   const location = useLocation();
   const params = useParams();
   const invoiceId = Number(params.id);
@@ -167,7 +170,17 @@ export const InvoicePrintPage = () => {
     }
   }, [invoiceId]);
 
-  const sections = useMemo(() => (invoice ? buildSections(invoice) : []), [invoice]);
+  const costBreakupMap = useMemo(
+    () =>
+      new Map(
+        catalog
+          .filter((item) => (item.costBreakup ?? []).length > 0)
+          .map((item) => [normalize(item.name), item.costBreakup ?? []]),
+      ),
+    [catalog],
+  );
+
+  const sections = useMemo(() => (invoice ? buildSections(invoice, costBreakupMap) : []), [invoice, costBreakupMap]);
 
   const leftDetails = useMemo(() => {
     if (!invoice) {

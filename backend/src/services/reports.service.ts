@@ -47,6 +47,8 @@ const applyHeaderStyle = (worksheet: ExcelJS.Worksheet) => {
   });
 };
 
+const isRadiologyItem = (name: string) => /x ray|x-ray|xray|ultrasound|usg|sonography|scan/.test(name.toLowerCase());
+
 export const getDashboardSnapshot = async (date = dayjs().format("YYYY-MM-DD")) => {
   return getOrSetCache(`dashboard:${date}`, 30_000, async () => {
     const start = dayjs(date).startOf("day").toDate();
@@ -131,6 +133,7 @@ export const getOperationalReports = async ({ date, fromDate, toDate }: ReportRa
         where: { createdAt: { gte: start, lte: end } },
         orderBy: { createdAt: "asc" },
         include: {
+          items: true,
           patient: { select: { id: true, name: true, mrn: true } },
           doctor: { select: { id: true, name: true } },
           visit: {
@@ -156,6 +159,56 @@ export const getOperationalReports = async ({ date, fromDate, toDate }: ReportRa
       : [];
 
     const doctorMap = new Map(doctors.map((doctor) => [doctor.id, doctor]));
+    const doctorWisePayments = Array.from(
+      invoices.reduce(
+        (map, invoice) => {
+          const current = map.get(invoice.doctorId) ?? {
+            doctorId: invoice.doctorId,
+            doctorName: invoice.doctor?.name ?? `Doctor #${invoice.doctorId}`,
+            specialization: doctorMap.get(invoice.doctorId)?.doctorProfile?.specialization ?? null,
+            invoiceCount: 0,
+            paidAmount: 0,
+            dueAmount: 0,
+          };
+
+          current.invoiceCount += 1;
+          current.paidAmount += toAmount(invoice.paidAmount);
+          current.dueAmount += toAmount(invoice.dueAmount);
+          map.set(invoice.doctorId, current);
+          return map;
+        },
+        new Map<number, {
+          doctorId: number;
+          doctorName: string;
+          specialization: string | null;
+          invoiceCount: number;
+          paidAmount: number;
+          dueAmount: number;
+        }>(),
+      ).values(),
+    ).sort((a, b) => b.paidAmount - a.paidAmount);
+
+    const collectionsMap = invoices.reduce(
+      (map, invoice) => {
+        const invoiceItems = invoice.items ?? [];
+        const hasLabItems = invoiceItems.some((item) => item.category === "LAB" && !isRadiologyItem(item.name));
+        const hasRadiologyItems = invoiceItems.some((item) => isRadiologyItem(item.name));
+        const stream =
+          invoice.invoiceType === "IPD" || invoice.visit?.type === "IPD"
+            ? "IPD Collection"
+            : invoice.invoiceType === "LAB" || hasLabItems || hasRadiologyItems
+              ? "Labs Collection"
+              : "OPD Collection";
+        const current = map.get(stream) ?? { stream, invoices: 0, total: 0, paidAmount: 0, dueAmount: 0 };
+        current.invoices += 1;
+        current.total += toAmount(invoice.total);
+        current.paidAmount += toAmount(invoice.paidAmount);
+        current.dueAmount += toAmount(invoice.dueAmount);
+        map.set(stream, current);
+        return map;
+      },
+      new Map<string, { stream: string; invoices: number; total: number; paidAmount: number; dueAmount: number }>(),
+    );
 
     return {
       fromDate: range.fromDate,
@@ -183,6 +236,8 @@ export const getOperationalReports = async ({ date, fromDate, toDate }: ReportRa
         payments: row._count.id,
         amount: toAmount(row._sum.amount),
       })),
+      doctorWisePayments,
+      collections: Array.from(collectionsMap.values()),
       invoices: invoices.map((invoice) => ({
         invoiceNo: invoice.invoiceNo,
         createdAt: invoice.createdAt.toISOString(),
@@ -250,6 +305,28 @@ export const exportOperationalReportWorkbook = async (input: ReportRangeInput = 
   applyHeaderStyle(paymentSheet);
   paymentSheet.addRows(report.paymentMix);
 
+  const doctorPaymentSheet = workbook.addWorksheet("Doctor Wise Payment");
+  doctorPaymentSheet.columns = [
+    { header: "Doctor Name", key: "doctorName", width: 28 },
+    { header: "Specialization", key: "specialization", width: 24 },
+    { header: "Invoices", key: "invoiceCount", width: 12 },
+    { header: "Paid Amount", key: "paidAmount", width: 16 },
+    { header: "Due Amount", key: "dueAmount", width: 16 },
+  ];
+  applyHeaderStyle(doctorPaymentSheet);
+  doctorPaymentSheet.addRows(report.doctorWisePayments);
+
+  const collectionSheet = workbook.addWorksheet("Collections");
+  collectionSheet.columns = [
+    { header: "Collection Stream", key: "stream", width: 24 },
+    { header: "Invoices", key: "invoices", width: 12 },
+    { header: "Total", key: "total", width: 16 },
+    { header: "Paid Amount", key: "paidAmount", width: 16 },
+    { header: "Due Amount", key: "dueAmount", width: 16 },
+  ];
+  applyHeaderStyle(collectionSheet);
+  collectionSheet.addRows(report.collections);
+
   const invoiceSheet = workbook.addWorksheet("Invoices");
   invoiceSheet.columns = [
     { header: "Invoice No", key: "invoiceNo", width: 18 },
@@ -269,7 +346,7 @@ export const exportOperationalReportWorkbook = async (input: ReportRangeInput = 
   applyHeaderStyle(invoiceSheet);
   invoiceSheet.addRows(report.invoices);
 
-  [summarySheet, doctorSheet, bedSheet, paymentSheet, invoiceSheet].forEach((sheet) => {
+  [summarySheet, doctorSheet, bedSheet, paymentSheet, doctorPaymentSheet, collectionSheet, invoiceSheet].forEach((sheet) => {
     sheet.eachRow((row, rowNumber) => {
       if (rowNumber === 1) {
         return;

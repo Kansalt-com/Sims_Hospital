@@ -164,6 +164,57 @@ export const ReportsPage = () => {
         </div>
       </Card>
 
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Card className="rounded-[28px]">
+          <h2 className="mb-4 text-xl font-semibold">Doctor Wise Payment</h2>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="py-2">Doctor</th>
+                  <th className="py-2">Specialization</th>
+                  <th className="py-2">Invoices</th>
+                  <th className="py-2">Paid</th>
+                  <th className="py-2">Due</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(report?.doctorWisePayments ?? []).map((row) => (
+                  <tr key={row.doctorId} className="border-b border-slate-100">
+                    <td className="py-3 font-medium">{row.doctorName}</td>
+                    <td className="py-3">{row.specialization ?? "-"}</td>
+                    <td className="py-3">{row.invoiceCount}</td>
+                    <td className="py-3">{formatCurrency(row.paidAmount)}</td>
+                    <td className="py-3">{formatCurrency(row.dueAmount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        <Card className="rounded-[28px]">
+          <h2 className="mb-4 text-xl font-semibold">Collections</h2>
+          <div className="space-y-3">
+            {(report?.collections ?? []).map((row) => (
+              <div key={row.stream} className="rounded-3xl border border-slate-200 bg-slate-50/70 p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-semibold text-slate-900">{row.stream}</p>
+                    <p className="text-xs text-slate-500">{row.invoices} invoice(s)</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-slate-500">Paid</p>
+                    <p className="text-xl font-semibold text-slate-900">{formatCurrency(row.paidAmount)}</p>
+                    <p className="text-xs text-slate-500">Due {formatCurrency(row.dueAmount)}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
       <Card className="rounded-[28px]">
         <h2 className="mb-4 text-xl font-semibold">Invoices In Selected Range</h2>
         <div className="overflow-x-auto">

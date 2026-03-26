@@ -165,7 +165,7 @@ export type Prescription = {
 
 export type InvoiceItem = {
   id?: number;
-  category: "CONSULTATION" | "LAB" | "PROCEDURE" | "MEDICINE" | "MISC";
+  category: "CONSULTATION" | "LAB" | "RADIOLOGY" | "PROCEDURE" | "MEDICINE" | "MISC";
   name: string;
   qty: number;
   unitPrice: number;
@@ -275,6 +275,21 @@ export type AnalyticsReport = {
     paymentMode: string;
     payments: number;
     amount: number;
+  }>;
+  doctorWisePayments: Array<{
+    doctorId: number;
+    doctorName: string;
+    specialization?: string | null;
+    invoiceCount: number;
+    paidAmount: number;
+    dueAmount: number;
+  }>;
+  collections: Array<{
+    stream: string;
+    invoices: number;
+    total: number;
+    paidAmount: number;
+    dueAmount: number;
   }>;
   invoices: Array<{
     invoiceNo: string;

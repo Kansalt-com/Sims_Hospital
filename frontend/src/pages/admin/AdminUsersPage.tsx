@@ -23,6 +23,9 @@ export const AdminUsersPage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [query, setQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"ALL" | ManagedUser["role"]>("ALL");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
   const [form, setForm] = useState({
     name: "",
     username: "",
@@ -31,6 +34,20 @@ export const AdminUsersPage = () => {
   });
 
   const adminCount = useMemo(() => users.filter((user) => user.role === "ADMIN").length, [users]);
+  const filteredUsers = useMemo(
+    () =>
+      users.filter((user) => {
+        const normalizedQuery = query.trim().toLowerCase();
+        const queryMatch = normalizedQuery
+          ? user.name.toLowerCase().includes(normalizedQuery) || user.username.toLowerCase().includes(normalizedQuery)
+          : true;
+        const roleMatch = roleFilter === "ALL" ? true : user.role === roleFilter;
+        const statusMatch =
+          statusFilter === "ALL" ? true : statusFilter === "ACTIVE" ? user.active : !user.active;
+        return queryMatch && roleMatch && statusMatch;
+      }),
+    [users, query, roleFilter, statusFilter],
+  );
 
   const load = async () => {
     setLoading(true);
@@ -153,6 +170,26 @@ export const AdminUsersPage = () => {
 
       <Card>
         <h2 className="mb-4 text-lg font-semibold">Users</h2>
+        <div className="mb-4 flex flex-wrap gap-2">
+          <Input className="max-w-sm" placeholder="Search name / username" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <Select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value as "ALL" | ManagedUser["role"])}>
+            <option value="ALL">All Roles</option>
+            <option value="ADMIN">Admin</option>
+            <option value="RECEPTION">Reception</option>
+            <option value="DOCTOR">Doctor</option>
+            <option value="BILLING">Billing</option>
+            <option value="PHARMACY">Pharmacy</option>
+            <option value="LAB_TECHNICIAN">Lab Technician</option>
+          </Select>
+          <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as "ALL" | "ACTIVE" | "INACTIVE")}>
+            <option value="ALL">All Status</option>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+          </Select>
+          <Button variant="secondary" onClick={() => { setQuery(""); setRoleFilter("ALL"); setStatusFilter("ALL"); }}>
+            Reset Filters
+          </Button>
+        </div>
         {loading ? (
           <Loader />
         ) : (
@@ -169,7 +206,7 @@ export const AdminUsersPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {users.map((user) => {
+                {filteredUsers.map((user) => {
                   const deleting = deletingId === user.id;
                   const deletingLastAdmin = user.role === "ADMIN" && adminCount <= 1;
 

@@ -1,9 +1,11 @@
+import { useMemo, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Input } from "../../components/ui/Input";
 import { Loader } from "../../components/ui/Loader";
+import { Select } from "../../components/ui/Select";
 import { formatCurrency, formatDate } from "../../utils/format";
 import type { VisitQueueItem } from "./visitTypes";
 
@@ -38,17 +40,49 @@ export const VisitQueueTable = ({
   onPrescription,
   onAdmitToIpd,
 }: VisitQueueTableProps) => {
+  const [serviceFilter, setServiceFilter] = useState<"ALL" | "CONSULTATION" | "LAB_ONLY">("ALL");
+  const [billingFilter, setBillingFilter] = useState<"ALL" | "BILLED" | "NOT_BILLED">("ALL");
+  const filteredRows = useMemo(
+    () =>
+      rows.filter((row) => {
+        const serviceMatch =
+          serviceFilter === "ALL"
+            ? true
+            : serviceFilter === "LAB_ONLY"
+              ? Number(row.consultationFee || 0) <= 0
+              : Number(row.consultationFee || 0) > 0;
+        const billingMatch =
+          billingFilter === "ALL"
+            ? true
+            : billingFilter === "BILLED"
+              ? Boolean(row.invoice)
+              : !row.invoice;
+        return serviceMatch && billingMatch;
+      }),
+    [rows, serviceFilter, billingFilter],
+  );
+
   return (
     <Card className="rounded-[28px]">
       <div className="mb-4 flex flex-wrap gap-2">
         <Input className="max-w-sm" label="Search Queue" placeholder="Search patient / phone / MRN" value={query} onChange={(e) => onQueryChange(e.target.value)} />
+        <Select value={serviceFilter} onChange={(e) => setServiceFilter(e.target.value as "ALL" | "CONSULTATION" | "LAB_ONLY")}>
+          <option value="ALL">All Services</option>
+          <option value="CONSULTATION">Consultation</option>
+          <option value="LAB_ONLY">Labs Only</option>
+        </Select>
+        <Select value={billingFilter} onChange={(e) => setBillingFilter(e.target.value as "ALL" | "BILLED" | "NOT_BILLED")}>
+          <option value="ALL">All Billing</option>
+          <option value="BILLED">Billed</option>
+          <option value="NOT_BILLED">Not Billed</option>
+        </Select>
         <div className="flex items-end gap-2">
           <Button onClick={onSearch}>Search</Button>
-          <Button variant="secondary" onClick={onReset}>Reset</Button>
+          <Button variant="secondary" onClick={() => { setServiceFilter("ALL"); setBillingFilter("ALL"); onReset(); }}>Reset</Button>
         </div>
       </div>
 
-      {loading ? <Loader /> : pageError ? <EmptyState text={pageError} action={<Button onClick={onRetry}>Retry</Button>} /> : rows.length === 0 ? <EmptyState text="No OPD visits found." /> : (
+      {loading ? <Loader /> : pageError ? <EmptyState text={pageError} action={<Button onClick={onRetry}>Retry</Button>} /> : filteredRows.length === 0 ? <EmptyState text="No OPD visits found." /> : (
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead>
@@ -62,9 +96,9 @@ export const VisitQueueTable = ({
                 <th className="py-2">Status</th>
                 <th className="py-2">Actions</th>
               </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
+              </thead>
+              <tbody>
+              {filteredRows.map((row) => (
                 <tr key={row.id} className="border-b border-slate-100">
                   <td className="py-3">#{row.id}</td>
                   <td className="py-3">

@@ -87,7 +87,7 @@ type InvoiceCreatePayload = {
   visitId: number;
   invoiceType: "OPD" | "IPD" | "PHARMACY" | "LAB" | "GENERAL";
   items: Array<{
-    category: "CONSULTATION" | "LAB" | "PROCEDURE" | "MEDICINE" | "MISC";
+    category: "CONSULTATION" | "LAB" | "RADIOLOGY" | "PROCEDURE" | "MEDICINE" | "MISC";
     name: string;
     qty: number;
     unitPrice: number;
@@ -102,7 +102,7 @@ type InvoiceCreatePayload = {
 
 type InvoiceItemsPayload = {
   items: Array<{
-    category: "CONSULTATION" | "LAB" | "PROCEDURE" | "MEDICINE" | "MISC";
+    category: "CONSULTATION" | "LAB" | "RADIOLOGY" | "PROCEDURE" | "MEDICINE" | "MISC";
     name: string;
     qty: number;
     unitPrice: number;
