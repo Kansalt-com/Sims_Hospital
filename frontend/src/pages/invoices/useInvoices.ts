@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "../../api/client";
 import { invoiceApi, visitApi } from "../../api/services";
-import { SERVICE_CATALOG, type ServiceCatalogItem, type ServiceDepartment } from "../../data/serviceCatalog";
+import type { ServiceCatalogItem, ServiceDepartment } from "../../data/serviceCatalog";
+import { useServiceCatalog } from "../../hooks/useServiceCatalog";
 import type {
   BillingErrors,
   CatalogSelection,
@@ -52,7 +53,8 @@ export const blankPayment = (): PaymentFormState => ({
   referenceNo: "",
 });
 
-export const useInvoices = (presetVisitId = "") => {
+export const useInvoices = (presetVisitId = "", presetDepartment?: ServiceDepartment | null) => {
+  const { catalog } = useServiceCatalog();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [paymentSaving, setPaymentSaving] = useState<number | null>(null);
@@ -66,7 +68,7 @@ export const useInvoices = (presetVisitId = "") => {
   const [payment, setPayment] = useState<PaymentFormState>(blankPayment());
   const [notes, setNotes] = useState("");
   const [catalogSelection, setCatalogSelection] = useState<CatalogSelection>({
-    department: "LAB",
+    department: presetDepartment ?? "LAB",
     itemId: "",
   });
   const [lastCreated, setLastCreated] = useState<{ invoiceId: number; visitId: number; dueAmount: number } | null>(null);
@@ -103,6 +105,17 @@ export const useInvoices = (presetVisitId = "") => {
     setVisitId(presetVisitId);
   }, [presetVisitId]);
 
+  useEffect(() => {
+    if (!presetDepartment) {
+      return;
+    }
+
+    setCatalogSelection((prev) => ({
+      department: presetDepartment,
+      itemId: prev.department === presetDepartment ? prev.itemId : "",
+    }));
+  }, [presetDepartment]);
+
   const selectedVisit = useMemo(
     () => visits.find((visit) => String(visit.id) === visitId) ?? null,
     [visitId, visits],
@@ -116,8 +129,8 @@ export const useInvoices = (presetVisitId = "") => {
   }, [selectedVisit]);
 
   const catalogItems = useMemo(
-    () => SERVICE_CATALOG.filter((item) => item.department === catalogSelection.department),
-    [catalogSelection.department],
+    () => catalog.filter((item) => item.department === catalogSelection.department),
+    [catalog, catalogSelection.department],
   );
 
   useEffect(() => {

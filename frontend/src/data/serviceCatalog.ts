@@ -9,6 +9,7 @@ export type ServiceCatalogItem = {
   category: "CONSULTATION" | "LAB" | "PROCEDURE" | "MEDICINE" | "MISC";
   source: string;
   editablePrice?: boolean;
+  costBreakup?: string[];
 };
 
 export const SERVICE_DEPARTMENTS: ServiceDepartment[] = ["OPD", "IPD", "BED", "WARD", "OT", "LAB", "XRAY", "ULTRASOUND"];

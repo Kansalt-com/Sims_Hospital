@@ -29,6 +29,11 @@ export const VisitRegistrationForm = ({
     <Card className="rounded-[28px]">
       <h2 className="mb-4 text-lg font-semibold">Create OPD Visit</h2>
       <form onSubmit={onSubmit} className="grid gap-3 md:grid-cols-3">
+        <Select label="OPD Service" value={form.visitPurpose} onChange={(e) => onFormChange({ ...form, visitPurpose: e.target.value as VisitFormState["visitPurpose"] })}>
+          <option value="CONSULTATION">Consultation</option>
+          <option value="LAB_ONLY">Labs Only</option>
+        </Select>
+
         <Select label="Patient Mode" value={patientMode} onChange={(e) => onPatientModeChange(e.target.value as "existing" | "new")}>
           <option value="existing">Existing Patient</option>
           <option value="new">New Patient</option>
@@ -45,16 +50,35 @@ export const VisitRegistrationForm = ({
           <Input label="New Patient Name" value={form.newName} onChange={(e) => onFormChange({ ...form, newName: e.target.value })} required />
         )}
 
-        <Select label="Doctor" value={form.doctorId} onChange={(e) => onFormChange({ ...form, doctorId: e.target.value })} required>
+        <Select
+          label={form.visitPurpose === "LAB_ONLY" ? "Referring Doctor" : "Doctor"}
+          value={form.doctorId}
+          onChange={(e) => onFormChange({ ...form, doctorId: e.target.value })}
+          required
+        >
           <option value="">Assign doctor</option>
           {doctors.map((doctor) => (
             <option key={doctor.id} value={doctor.id}>{doctor.name}</option>
           ))}
         </Select>
 
-        <Input label="Consultation Fee" type="number" min={0} prefix="Rs" value={form.consultationFee} onChange={(e) => onFormChange({ ...form, consultationFee: e.target.value })} required />
+        <Input
+          label={form.visitPurpose === "LAB_ONLY" ? "Lab Visit Fee" : "Consultation Fee"}
+          type="number"
+          min={0}
+          prefix="Rs"
+          value={form.visitPurpose === "LAB_ONLY" ? "0" : form.consultationFee}
+          onChange={(e) => onFormChange({ ...form, consultationFee: e.target.value })}
+          disabled={form.visitPurpose === "LAB_ONLY"}
+          required={form.visitPurpose !== "LAB_ONLY"}
+        />
         <Input label="Scheduled Date" type="date" value={form.scheduledAt} onChange={(e) => onFormChange({ ...form, scheduledAt: e.target.value })} />
-        <Input label="Reason" value={form.reason} onChange={(e) => onFormChange({ ...form, reason: e.target.value })} />
+        <Input
+          label="Reason"
+          placeholder={form.visitPurpose === "LAB_ONLY" ? "Example: CBC, LFT, Thyroid panel" : undefined}
+          value={form.reason}
+          onChange={(e) => onFormChange({ ...form, reason: e.target.value })}
+        />
 
         {patientMode === "new" ? (
           <>

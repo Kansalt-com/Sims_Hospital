@@ -12,6 +12,7 @@ export type PatientOption = {
 };
 
 export type VisitFormState = {
+  visitPurpose: "CONSULTATION" | "LAB_ONLY";
   patientId: string;
   doctorId: string;
   consultationFee: string;

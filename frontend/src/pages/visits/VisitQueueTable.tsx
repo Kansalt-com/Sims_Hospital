@@ -17,7 +17,7 @@ type VisitQueueTableProps = {
   onReset: () => void;
   onRetry: () => void;
   onChangeStatus: (visitId: number, status: string) => void;
-  onCreateBill: (visitId: number) => void;
+  onCreateBill: (visit: VisitQueueItem) => void;
   onPrintBill: (invoiceId: number) => void;
   onPrescription: (visitId: number) => void;
   onAdmitToIpd: (visit: VisitQueueItem) => void;
@@ -93,7 +93,7 @@ export const VisitQueueTable = ({
                       {row.invoice ? (
                         <Button className="h-8 px-3 py-1 text-xs" variant="secondary" onClick={() => onPrintBill(row.invoice!.id)}>Print Bill</Button>
                       ) : (
-                        <Button className="h-8 px-3 py-1 text-xs" variant="secondary" onClick={() => onCreateBill(row.id)}>Create Bill</Button>
+                        <Button className="h-8 px-3 py-1 text-xs" variant="secondary" onClick={() => onCreateBill(row)}>Create Bill</Button>
                       )}
                       {row.invoice && Number(row.invoice.dueAmount || 0) <= 0 ? (
                         <Button className="h-8 px-3 py-1 text-xs" variant="ghost" onClick={() => onPrescription(row.id)}>Prescription</Button>
