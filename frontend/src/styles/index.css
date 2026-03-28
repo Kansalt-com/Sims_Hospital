@@ -118,7 +118,7 @@ button:disabled {
 .powered-by-kansalt__brand {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 3px;
   flex-shrink: 0;
 }
 
@@ -188,7 +188,7 @@ button:disabled {
 }
 
 .app-footer__powered-by .powered-by-kansalt__brand {
-  gap: 8px;
+  gap: 4px;
 }
 
 .powered-by-kansalt--hero .powered-by-kansalt__label {
