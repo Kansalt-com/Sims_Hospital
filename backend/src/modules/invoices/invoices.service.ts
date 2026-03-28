@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import dayjs from "dayjs";
 import { prisma } from "../../db/prisma.js";
 import type { AuthenticatedRequest } from "../../middleware/auth.js";
@@ -98,7 +99,7 @@ export const listCancelledInvoices = async () => {
   });
 
   return {
-    data: rows.map((row) => {
+    data: rows.map((row: typeof rows[number]) => {
       let metadata: Record<string, unknown> | null = null;
       try {
         metadata = row.metadataJson ? (JSON.parse(row.metadataJson) as Record<string, unknown>) : null;
@@ -186,7 +187,7 @@ export const createInvoice = async (payload: CreateInvoiceInput, req: Authentica
 
   const paymentSummary = computePaymentSummary(totals.total, payments);
 
-  const invoice = await prisma.$transaction(async (tx) => {
+  const invoice = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const invoiceNo = await createInvoiceNumber(tx);
 
     const created = await tx.invoice.create({
@@ -309,14 +310,14 @@ export const addInvoicePayments = async (invoiceId: number, payload: AddInvoiceP
   }
 
   const paymentSummary = computePaymentSummary(invoice.total, [
-    ...invoice.payments.map((payment) => ({
+    ...invoice.payments.map((payment: typeof invoice.payments[number]) => ({
       amount: payment.amount,
       paymentMode: payment.paymentMode,
     })),
     ...payload.payments,
   ]);
 
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     await createPaymentRecords(tx, invoice.id, invoice.patientId, payload.payments, req.user?.id);
 
     const row = await tx.invoice.update({
@@ -398,14 +399,14 @@ export const addInvoiceItems = async (invoiceId: number, payload: AppendInvoiceI
   });
 
   const paymentSummary = computePaymentSummary(invoice.total + addedTotals.total, [
-    ...invoice.payments.map((payment) => ({
+    ...invoice.payments.map((payment: typeof invoice.payments[number]) => ({
       amount: payment.amount,
       paymentMode: payment.paymentMode,
     })),
     ...(payload.payments ?? []),
   ]);
 
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     await tx.invoiceItem.createMany({
       data: addedTotals.linePreview.map((item) => ({
         invoiceId: invoice.id,
@@ -492,8 +493,8 @@ export const addInvoiceItems = async (invoiceId: number, payload: AppendInvoiceI
 };
 
 export const cancelInvoice = async (invoiceId: number, req: AuthenticatedRequest) => {
-  if (req.user?.username !== "RehmatSyedKhan") {
-    throw new AppError("Only super admin can cancel or delete bills", 403, "SUPER_ADMIN_REQUIRED");
+  if (!req.user?.permissions?.includes("billing:cancel")) {
+    throw new AppError("You do not have permission to cancel or delete bills", 403, "BILLING_CANCEL_FORBIDDEN");
   }
 
   const invoice = await prisma.invoice.findUnique({
@@ -517,13 +518,13 @@ export const cancelInvoice = async (invoiceId: number, req: AuthenticatedRequest
     throw new AppError("Invoice not found", 404, "INVOICE_NOT_FOUND");
   }
 
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     await writeAuditLog({
       actorId: req.user?.id,
       action: "invoice.cancel",
       entityType: "invoice",
       entityId: invoice.id,
-      description: `Invoice ${invoice.invoiceNo} cancelled by super admin`,
+      description: `Invoice ${invoice.invoiceNo} cancelled`,
       patientId: invoice.patientId,
       visitId: invoice.visitId,
       invoiceId: invoice.id,

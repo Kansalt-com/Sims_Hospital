@@ -81,11 +81,15 @@ docker build -t sims-hospital .
 docker run -p 4000:4000 -e JWT_SECRET=replace-me sims-hospital
 ```
 
-## Default Seed Users
+## First Admin Bootstrap
 
-- `admin` / `Admin@12345`
-- `billing` / `Billing@12345`
-- `doctor1` / `doctor123`
+Use environment variables on first startup for a fresh empty database:
+
+- `INITIAL_ADMIN_NAME`
+- `INITIAL_ADMIN_USERNAME`
+- `INITIAL_ADMIN_PASSWORD`
+
+The app will create that administrator once, require a password change on first login, and then stop seeding users automatically.
 
 ## Documentation
 

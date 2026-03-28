@@ -8,7 +8,7 @@ This guide deploys the current React frontend + Node/Express backend + Prisma ap
 - Backend runtime: `backend/dist/src/server.js`
 - Backend port: `4000`
 - Static uploads served by backend: `/uploads`
-- Database default: SQLite file at `backend/data/sims.db`
+- Database: PostgreSQL via `DATABASE_URL` and `DIRECT_URL`
 
 ## 1. Server Preparation
 
@@ -70,13 +70,17 @@ NODE_ENV=production
 PORT=4000
 JWT_SECRET=replace-with-a-long-random-secret
 JWT_EXPIRES_IN=8h
-DATABASE_URL=file:./data/sims.db
+DATABASE_URL=postgresql://postgres.project-ref:password@aws-1-region.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1&schema=public
+DIRECT_URL=postgresql://postgres.project-ref:password@aws-1-region.pooler.supabase.com:5432/postgres?schema=public
 CORS_ORIGIN=https://www.kansalt.com
 UPLOAD_DIR_PATH=./uploads
 UPLOAD_URL_PATH=uploads
 LOG_DIR=./logs
 ENABLE_FILE_LOGGING=true
 FRONTEND_DIST_DIR=../frontend/dist
+INITIAL_ADMIN_NAME=Initial Administrator
+INITIAL_ADMIN_USERNAME=admin
+INITIAL_ADMIN_PASSWORD=replace-with-a-strong-admin-password
 ```
 
 If you are serving directly by IP only for testing, use:
@@ -113,11 +117,11 @@ VITE_UPLOAD_BASE_URL=http://147.93.104.13
 cd /var/www/sims-hospital/backend
 npm ci
 npx prisma generate
-npx prisma migrate deploy
+npx prisma db push
 npm run build
 ```
 
-Startup no longer applies schema migrations automatically. Keep `prisma migrate deploy` in your deployment flow so schema changes happen once, explicitly, before PM2 starts the backend.
+For later schema changes after PostgreSQL-native migrations are added, switch back to `npx prisma migrate deploy`. On the first fresh bootstrap, keep `PRISMA_SCHEMA_SYNC_MODE=none` after the initial successful start.
 
 Start backend with PM2:
 
@@ -237,7 +241,7 @@ Workflow behavior on push to `main`:
 3. Reset code to `origin/main`
 4. Install backend deps
 5. Run `prisma generate`
-6. Run Prisma deploy migrations
+6. Run Prisma schema sync for first bootstrap or deploy migrations after PostgreSQL-native migrations are in use
 7. Build backend
 8. Reload PM2
 9. Install frontend deps
@@ -294,7 +298,7 @@ curl -I https://www.kansalt.com/sims/api/auth/me
 
 ## 13. Notes
 
-- This deployment uses SQLite by default. For heavier production usage, move to managed PostgreSQL or MySQL.
-- Make sure `/var/www/sims-hospital/backend/data`, `/uploads`, and `/logs` are backed up.
+- This deployment expects PostgreSQL-compatible `DATABASE_URL` and `DIRECT_URL` values.
+- Make sure `/uploads` and `/logs` are backed up.
 - PM2 process definition lives in `backend/ecosystem.config.cjs`.
 - The deployment script lives in `deployment/scripts/deploy-vps.sh`.

@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import dayjs from "dayjs";
 import { prisma } from "../../db/prisma.js";
 import type { AuthenticatedRequest } from "../../middleware/auth.js";
@@ -132,7 +133,7 @@ export const createAdmission = async (payload: CreateAdmissionInput, req: Authen
     throw new AppError("Attending doctor not found", 400, "DOCTOR_NOT_FOUND");
   }
 
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const selectedBed = await assertBedAvailability(tx, payload.roomId, payload.bedId);
 
     const visit = await tx.visit.create({
@@ -215,7 +216,7 @@ export const updateAdmission = async (admissionId: number, payload: UpdateAdmiss
     }
   }
 
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const nextRoomId = payload.roomId === null ? null : payload.roomId ?? existing.roomId;
     const nextBedId = payload.bedId === null ? null : payload.bedId ?? existing.bedId;
     const selectedBed = await assertBedAvailability(tx, nextRoomId, nextBedId);
@@ -287,7 +288,7 @@ export const dischargeAdmission = async (admissionId: number, payload: Discharge
 
   const dischargeAt = payload.dischargedAt ? new Date(payload.dischargedAt) : new Date();
 
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const row = await tx.iPDAdmission.update({
       where: { id: admission.id },
       data: {

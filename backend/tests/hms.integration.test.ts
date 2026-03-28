@@ -1,29 +1,39 @@
 import { after, before, describe, test } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import os from "node:os";
+import { execFileSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { fileURLToPath } from "node:url";
 import path from "node:path";
 
-const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "sims-hms-"));
-const dbPath = path.join(tempRoot, "sims-test.db");
-
 process.env.NODE_ENV = "test";
-process.env.JWT_SECRET = "test-secret";
-process.env.DATABASE_URL = `file:${dbPath}`;
-process.env.UPLOAD_DIR_PATH = path.join(tempRoot, "uploads");
-process.env.LOG_DIR = path.join(tempRoot, "logs");
+process.env.JWT_SECRET = "test-secret-with-uppercase-1!";
 process.env.ENABLE_FILE_LOGGING = "false";
-process.env.CORS_ORIGIN = "*";
+process.env.CORS_ORIGIN = "http://localhost:5173";
+
+const baseDatabaseUrl = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
+const baseDirectUrl = process.env.TEST_DIRECT_URL ?? process.env.DIRECT_URL ?? baseDatabaseUrl;
+const shouldRun = Boolean(baseDatabaseUrl && baseDirectUrl);
+const testSchema = `test_${randomUUID().replace(/-/g, "")}`;
+
+const withSchema = (connectionString: string, schema: string) => {
+  const url = new URL(connectionString);
+  url.searchParams.set("schema", schema);
+  return url.toString();
+};
+
+if (shouldRun) {
+  process.env.DATABASE_URL = withSchema(baseDatabaseUrl!, testSchema);
+  process.env.DIRECT_URL = withSchema(baseDirectUrl!, testSchema);
+}
 
 type Runtime = {
   app: typeof import("../src/app.js").app;
-  applyLocalSqliteMigrations: typeof import("../src/bootstrap/startup.js").applyLocalSqliteMigrations;
   initializeRuntime: typeof import("../src/bootstrap/startup.js").initializeRuntime;
   prisma: typeof import("../src/db/prisma.js").prisma;
   hashPassword: typeof import("../src/utils/password.js").hashPassword;
 };
 
-let runtime: Runtime;
+let runtime: Runtime | null = null;
 let server: Awaited<ReturnType<typeof import("node:http").createServer>> | null = null;
 let baseUrl = "";
 let receptionToken = "";
@@ -33,6 +43,8 @@ let createdPatientId = 0;
 let createdVisitId = 0;
 let createdInvoiceId = 0;
 let createdAdmissionId = 0;
+
+const backendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const jsonFetch = async (url: string, init?: RequestInit) => {
   const response = await fetch(url, init);
@@ -48,42 +60,65 @@ const authHeaders = (token: string) => ({
   Authorization: `Bearer ${token}`,
 });
 
+test(
+  "integration tests require TEST_DATABASE_URL/TEST_DIRECT_URL or DATABASE_URL/DIRECT_URL",
+  { skip: shouldRun },
+  (t) => {
+    t.diagnostic(
+      "Skipping HMS integration suite because no PostgreSQL test connection was provided.",
+    );
+  },
+);
+
 before(async () => {
+  if (!shouldRun) {
+    return;
+  }
+
+  execFileSync(process.platform === "win32" ? "npm.cmd" : "npm", ["run", "prisma:push", "--", "--skip-generate"], {
+    cwd: backendRoot,
+    env: process.env,
+    stdio: "pipe",
+  });
+
   runtime = {
     app: (await import("../src/app.js")).app,
-    applyLocalSqliteMigrations: (await import("../src/bootstrap/startup.js")).applyLocalSqliteMigrations,
     initializeRuntime: (await import("../src/bootstrap/startup.js")).initializeRuntime,
     prisma: (await import("../src/db/prisma.js")).prisma,
     hashPassword: (await import("../src/utils/password.js")).hashPassword,
   };
 
-  await runtime.applyLocalSqliteMigrations(runtime.prisma);
-  await runtime.initializeRuntime();
+  const activeRuntime = runtime;
+  if (!activeRuntime) {
+    throw new Error("Failed to initialize test runtime");
+  }
+
+  await activeRuntime.initializeRuntime();
 
   const receptionPassword = "Reception@12345";
   const doctorPassword = "Doctor@12345";
 
-  const reception = await runtime.prisma.user.upsert({
+  const reception = await activeRuntime.prisma.user.upsert({
     where: { username: "reception.test" },
     update: {},
     create: {
       name: "Reception Test",
       username: "reception.test",
       role: "RECEPTION",
-      passwordHash: await runtime.hashPassword(receptionPassword),
+      passwordHash: await activeRuntime.hashPassword(receptionPassword),
       active: true,
       forcePasswordChange: false,
     },
   });
 
-  const doctor = await runtime.prisma.user.upsert({
+  const doctor = await activeRuntime.prisma.user.upsert({
     where: { username: "doctor.test" },
     update: {},
     create: {
       name: "Dr. Test",
       username: "doctor.test",
       role: "DOCTOR",
-      passwordHash: await runtime.hashPassword(doctorPassword),
+      passwordHash: await activeRuntime.hashPassword(doctorPassword),
       active: true,
       forcePasswordChange: false,
       doctorProfile: {
@@ -100,7 +135,7 @@ before(async () => {
 
   doctorId = doctor.id;
 
-  server = runtime.app.listen(0);
+  server = activeRuntime.app.listen(0);
   await new Promise<void>((resolve) => server!.once("listening", () => resolve()));
   const address = server.address();
   if (!address || typeof address === "string") {
@@ -130,7 +165,15 @@ before(async () => {
 });
 
 after(async () => {
-  await runtime.prisma.$disconnect();
+  if (!shouldRun) {
+    return;
+  }
+
+  if (runtime) {
+    await runtime.prisma.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${testSchema}" CASCADE`);
+    await runtime.prisma.$disconnect();
+  }
+
   await new Promise<void>((resolve, reject) => {
     if (!server) {
       resolve();
@@ -138,10 +181,9 @@ after(async () => {
     }
     server.close((error) => (error ? reject(error) : resolve()));
   });
-  fs.rmSync(tempRoot, { recursive: true, force: true });
 });
 
-describe("enterprise HMS workflow", { concurrency: false }, () => {
+describe("enterprise HMS workflow", { concurrency: false, skip: !shouldRun }, () => {
   test("registers a patient through the secured API", async () => {
     const response = await jsonFetch(`${baseUrl}/patients`, {
       method: "POST",
@@ -273,7 +315,7 @@ describe("enterprise HMS workflow", { concurrency: false }, () => {
     createdAdmissionId = transferResponse.body.data.id;
     assert.equal(transferResponse.body.data.bedId, bed.id);
 
-    const occupiedBed = await runtime.prisma.bed.findUniqueOrThrow({ where: { id: bed.id } });
+    const occupiedBed = await runtime!.prisma.bed.findUniqueOrThrow({ where: { id: bed.id } });
     assert.equal(occupiedBed.status, "OCCUPIED");
 
     const dischargeResponse = await jsonFetch(`${baseUrl}/ipd/${createdAdmissionId}/discharge`, {
@@ -287,7 +329,7 @@ describe("enterprise HMS workflow", { concurrency: false }, () => {
     assert.equal(dischargeResponse.status, 200);
     assert.equal(dischargeResponse.body.data.status, "DISCHARGED");
 
-    const releasedBed = await runtime.prisma.bed.findUniqueOrThrow({ where: { id: bed.id } });
+    const releasedBed = await runtime!.prisma.bed.findUniqueOrThrow({ where: { id: bed.id } });
     assert.equal(releasedBed.status, "AVAILABLE");
   });
 });

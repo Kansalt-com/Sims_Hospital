@@ -2,6 +2,7 @@
 import path from "node:path";
 import type { PrismaClient } from "@prisma/client";
 import { prisma } from "../db/prisma.js";
+import { ensurePermissionCatalog } from "../services/permission.service.js";
 import { hashPassword } from "../utils/password.js";
 import { env } from "../config/env.js";
 
@@ -35,41 +36,49 @@ const ensureDefaultSettings = async (client: PrismaClient) => {
   });
 };
 
-const ensureDefaultAdmin = async (client: PrismaClient) => {
-  const existing = await client.user.findUnique({ where: { username: "admin" } });
-  if (existing) {
+const ensureInitialAdmin = async (client: PrismaClient) => {
+  const adminCount = await client.user.count({
+    where: {
+      role: "ADMIN",
+      active: true,
+    },
+  });
+  if (adminCount > 0) {
     return;
   }
 
-  await client.user.create({
-    data: {
-      name: "SIMS Administrator",
-      username: "admin",
-      passwordHash: await hashPassword("Admin@12345"),
-      role: "ADMIN",
-      active: true,
-      forcePasswordChange: true,
-    },
-  });
-};
+  const username = env.initialAdminUsername;
+  const password = env.initialAdminPassword;
+  const name = env.initialAdminName ?? "Initial Administrator";
 
-const ensureSuperAdmin = async (client: PrismaClient) => {
-  const existing = await client.user.findUnique({ where: { username: "RehmatSyedKhan" } });
-  if (existing) {
-    if (!existing.forcePasswordChange) {
-      await client.user.update({
-        where: { id: existing.id },
-        data: { forcePasswordChange: true, active: true },
-      });
+  if (!username || !password) {
+    if (env.nodeEnv === "production") {
+      throw new Error(
+        "No active admin user exists. Set INITIAL_ADMIN_USERNAME and INITIAL_ADMIN_PASSWORD before first production startup.",
+      );
     }
     return;
   }
 
-  await client.user.create({
-    data: {
-      name: "Rehmat Syed Khan",
-      username: "RehmatSyedKhan",
-      passwordHash: await hashPassword("Rehmat@123"),
+  if (password.length < 10) {
+    throw new Error("INITIAL_ADMIN_PASSWORD must be at least 10 characters long.");
+  }
+
+  const passwordHash = await hashPassword(password);
+
+  await client.user.upsert({
+    where: { username },
+    update: {
+      name,
+      role: "ADMIN",
+      active: true,
+      forcePasswordChange: true,
+      passwordHash,
+    },
+    create: {
+      name,
+      username,
+      passwordHash,
       role: "ADMIN",
       active: true,
       forcePasswordChange: true,
@@ -117,8 +126,8 @@ const ensureMasterData = async (client: PrismaClient) => {
 
 export const initializeRuntime = async () => {
   ensureFolders();
+  await ensurePermissionCatalog();
   await ensureDefaultSettings(prisma);
-  await ensureDefaultAdmin(prisma);
-  await ensureSuperAdmin(prisma);
+  await ensureInitialAdmin(prisma);
   await ensureMasterData(prisma);
 };

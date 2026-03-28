@@ -60,11 +60,11 @@ export const InvoicesPage = () => {
     isNumeric,
   } = useInvoices(presetVisitId, presetDepartment, presetCatalogItemId);
 
-  const isSuperAdmin = user?.username === "RehmatSyedKhan";
+  const canCancelInvoices = user?.permissions?.includes("billing:cancel") ?? false;
 
   useEffect(() => {
-    load(query, { includeCancelled: isSuperAdmin });
-  }, [isSuperAdmin]);
+    load(query, { includeCancelled: canCancelInvoices });
+  }, [canCancelInvoices]);
 
   return (
     <div className="space-y-6">
@@ -141,21 +141,21 @@ export const InvoicesPage = () => {
         query={query}
         invoices={invoices}
         cancelledInvoices={cancelledInvoices}
-        canCancelInvoices={isSuperAdmin}
+        canCancelInvoices={canCancelInvoices}
         pageError={pageError}
         onQueryChange={setQuery}
-        onSearch={() => load(query, { includeCancelled: isSuperAdmin })}
+        onSearch={() => load(query, { includeCancelled: canCancelInvoices })}
         onReset={() => {
           setQuery("");
-          load("", { includeCancelled: isSuperAdmin });
+          load("", { includeCancelled: canCancelInvoices });
         }}
-        onRetry={() => load(query, { includeCancelled: isSuperAdmin })}
+        onRetry={() => load(query, { includeCancelled: canCancelInvoices })}
         onCollectPayment={openPaymentModal}
         onAddCharges={(invoice) => {
           setVisitId(String(invoice.visitId));
           window.scrollTo({ top: 0, behavior: "smooth" });
         }}
-        onCancelInvoice={(invoice) => cancelInvoice(invoice, isSuperAdmin)}
+        onCancelInvoice={(invoice) => cancelInvoice(invoice, canCancelInvoices)}
       />
 
       <PaymentModal

@@ -69,10 +69,11 @@ On first launch, SIMS Hospital desktop app will:
 
 1. Start backend on localhost (default `43110`, auto-fallback to free port).
 2. Auto-apply SQL migrations from packaged `backend/prisma/migrations`.
-3. Auto-create default admin if missing:
-   - Username: `admin`
-   - Password: `Admin@12345`
-   - Forced password change on first login.
+3. Optionally bootstrap the first admin from environment variables before first launch:
+   - `INITIAL_ADMIN_NAME`
+   - `INITIAL_ADMIN_USERNAME`
+   - `INITIAL_ADMIN_PASSWORD`
+   - The account is forced to change password on first login.
 4. Open in Electron window and also open default browser URL.
 
 ## 6) Development Run Modes

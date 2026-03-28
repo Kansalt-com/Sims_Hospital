@@ -120,7 +120,7 @@ const findDuplicatePatient = async (
     take: 10,
   });
 
-  return candidates.find((candidate) => {
+  return candidates.find((candidate: typeof candidates[number]) => {
     const samePhone = normalizePhone(candidate.phone) === normalizedPhone;
     const sameName = normalizeName(candidate.name) === normalizedName;
     const sameGender = candidate.gender === payload.gender;

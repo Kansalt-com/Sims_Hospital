@@ -26,9 +26,10 @@ Reference files:
 1. Build frontend and backend.
 2. Start backend with `FRONTEND_DIST_DIR` pointing to the built frontend.
 3. On first startup the backend:
-   - applies migrations
+   - syncs or applies schema changes based on `PRISMA_SCHEMA_SYNC_MODE`
+   - creates the permission catalog if missing
    - creates hospital settings
-   - creates default admin
+   - creates the initial admin only if `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD` are provided and no active admin exists
    - seeds default room and bed inventory if missing
 
 ## Operational Checks
@@ -43,7 +44,7 @@ Reference files:
 
 - Use Azure App Service for the application container
 - Store uploads in persistent storage or extend to Azure Blob Storage
-- Move from SQLite to Azure PostgreSQL/MySQL for multi-instance production
+- Use Azure PostgreSQL or another managed PostgreSQL-compatible service for multi-instance production
 - Forward logs to Azure Application Insights using the existing structured backend log path
 
 ## Recommended Next Step For Multi-Hospital SaaS

@@ -10,7 +10,6 @@ import { AppError } from "../../utils/appError.js";
 import { hashPassword } from "../../utils/password.js";
 
 const router = Router();
-const HIDDEN_SUPER_ADMIN_USERNAME = "RehmatSyedKhan";
 
 const createUserSchema = z.object({
   name: z.string().min(2),
@@ -50,9 +49,6 @@ router.get(
       where: {
         role,
         active: active === undefined ? undefined : active === "true",
-        username: {
-          not: HIDDEN_SUPER_ADMIN_USERNAME,
-        },
       },
       select: {
         id: true,
@@ -231,7 +227,10 @@ router.delete(
       }
     }
 
-    const linkedRecords = Object.values(existing._count).reduce((sum, value) => sum + value, 0);
+    const linkedRecords = Object.values(existing._count as Record<string, number>).reduce(
+      (sum, value) => sum + value,
+      0,
+    );
     if (linkedRecords > 0) {
       throw new AppError("This user has linked operational records and cannot be deleted. Disable the account instead.", 400, "USER_IN_USE");
     }

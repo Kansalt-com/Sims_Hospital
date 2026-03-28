@@ -11,6 +11,31 @@ type ReportRangeInput = {
   toDate?: string;
 };
 
+type DoctorSummary = {
+  id: number;
+  name: string;
+  doctorProfile: {
+    specialization: string | null;
+  } | null;
+};
+
+type DoctorWisePaymentSummary = {
+  doctorId: number;
+  doctorName: string;
+  specialization: string | null;
+  invoiceCount: number;
+  paidAmount: number;
+  dueAmount: number;
+};
+
+type CollectionSummary = {
+  stream: string;
+  invoices: number;
+  total: number;
+  paidAmount: number;
+  dueAmount: number;
+};
+
 const resolveDateRange = ({ date, fromDate, toDate }: ReportRangeInput) => {
   const resolvedFromDate = fromDate || date || dayjs().format("YYYY-MM-DD");
   const resolvedToDate = toDate || date || resolvedFromDate;
@@ -146,8 +171,8 @@ export const getOperationalReports = async ({ date, fromDate, toDate }: ReportRa
       }),
     ]);
 
-    const doctorIds = doctorWise.map((row) => row.doctorId);
-    const doctors = doctorIds.length
+    const doctorIds = doctorWise.map((row: typeof doctorWise[number]) => row.doctorId);
+    const doctors: DoctorSummary[] = doctorIds.length
       ? await prisma.user.findMany({
           where: { id: { in: doctorIds } },
           select: {
@@ -155,13 +180,13 @@ export const getOperationalReports = async ({ date, fromDate, toDate }: ReportRa
             name: true,
             doctorProfile: { select: { specialization: true } },
           },
-        })
+        }) as DoctorSummary[]
       : [];
 
-    const doctorMap = new Map(doctors.map((doctor) => [doctor.id, doctor]));
+    const doctorMap = new Map(doctors.map((doctor: DoctorSummary) => [doctor.id, doctor] as const));
     const doctorWisePayments = Array.from(
       invoices.reduce(
-        (map, invoice) => {
+        (map: Map<number, DoctorWisePaymentSummary>, invoice: typeof invoices[number]) => {
           const current = map.get(invoice.doctorId) ?? {
             doctorId: invoice.doctorId,
             doctorName: invoice.doctor?.name ?? `Doctor #${invoice.doctorId}`,
@@ -186,13 +211,14 @@ export const getOperationalReports = async ({ date, fromDate, toDate }: ReportRa
           dueAmount: number;
         }>(),
       ).values(),
-    ).sort((a, b) => b.paidAmount - a.paidAmount);
+    ) as DoctorWisePaymentSummary[];
+    doctorWisePayments.sort((a, b) => b.paidAmount - a.paidAmount);
 
     const collectionsMap = invoices.reduce(
-      (map, invoice) => {
+      (map: Map<string, CollectionSummary>, invoice: typeof invoices[number]) => {
         const invoiceItems = invoice.items ?? [];
-        const hasLabItems = invoiceItems.some((item) => item.category === "LAB" && !isRadiologyItem(item.name));
-        const hasRadiologyItems = invoiceItems.some((item) => isRadiologyItem(item.name));
+        const hasLabItems = invoiceItems.some((item: typeof invoiceItems[number]) => item.category === "LAB" && !isRadiologyItem(item.name));
+        const hasRadiologyItems = invoiceItems.some((item: typeof invoiceItems[number]) => isRadiologyItem(item.name));
         const stream =
           invoice.invoiceType === "IPD" || invoice.visit?.type === "IPD"
             ? "IPD Collection"
@@ -220,25 +246,25 @@ export const getOperationalReports = async ({ date, fromDate, toDate }: ReportRa
         monthToDateRevenue: toAmount(monthlyRevenue._sum.paidAmount),
       },
       doctorWisePatients: doctorWise
-        .map((row) => ({
+        .map((row: typeof doctorWise[number]) => ({
           doctorId: row.doctorId,
           doctorName: doctorMap.get(row.doctorId)?.name ?? `Doctor #${row.doctorId}`,
           specialization: doctorMap.get(row.doctorId)?.doctorProfile?.specialization ?? null,
           patientCount: row._count.id,
         }))
-        .sort((a, b) => b.patientCount - a.patientCount),
-      bedOccupancy: bedOccupancy.map((row) => ({
+        .sort((a: { patientCount: number }, b: { patientCount: number }) => b.patientCount - a.patientCount),
+      bedOccupancy: bedOccupancy.map((row: typeof bedOccupancy[number]) => ({
         status: row.status,
         count: row._count.id,
       })),
-      paymentMix: paymentMix.map((row) => ({
+      paymentMix: paymentMix.map((row: typeof paymentMix[number]) => ({
         paymentMode: row.paymentMode,
         payments: row._count.id,
         amount: toAmount(row._sum.amount),
       })),
       doctorWisePayments,
       collections: Array.from(collectionsMap.values()),
-      invoices: invoices.map((invoice) => ({
+      invoices: invoices.map((invoice: typeof invoices[number]) => ({
         invoiceNo: invoice.invoiceNo,
         createdAt: invoice.createdAt.toISOString(),
         patientName: invoice.patient?.name ?? "-",

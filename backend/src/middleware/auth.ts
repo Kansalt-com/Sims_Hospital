@@ -80,6 +80,22 @@ export const authorize = (...roles: UserRoleValue[]) => {
   };
 };
 
+export const authorizePermission = (...permissionCodes: string[]) => {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return sendAuthError(res, "Unauthorized", "UNAUTHORIZED");
+    }
+
+    const permissions = req.user.permissions ?? [];
+    const hasPermission = permissionCodes.every((code) => permissions.includes(code));
+    if (!hasPermission) {
+      return sendAuthError(res, "Forbidden", "FORBIDDEN", 403);
+    }
+
+    next();
+  };
+};
+
 export const requireActiveUser = (user?: AuthenticatedUser) => {
   if (!user) {
     throw new AppError("Unauthorized", 401, "UNAUTHORIZED");

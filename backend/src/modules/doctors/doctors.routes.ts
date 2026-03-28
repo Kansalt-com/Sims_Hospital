@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import type { Prisma } from "@prisma/client";
 import { Router } from "express";
 import multer from "multer";
 import { z } from "zod";
@@ -140,7 +141,7 @@ router.post(
       throw new AppError("Username already exists", 400, "DUPLICATE_USERNAME");
     }
 
-    const created = await prisma.$transaction(async (tx) => {
+    const created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const user = await tx.user.create({
         data: {
           name: payload.fullName,
@@ -200,7 +201,7 @@ router.patch(
       }
     }
 
-    const updated = await prisma.$transaction(async (tx) => {
+    const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.user.update({
         where: { id: userId },
         data: {

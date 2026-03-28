@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticate, authorize, type AuthenticatedRequest } from "../../middleware/auth.js";
+import { authenticate, authorize, authorizePermission, type AuthenticatedRequest } from "../../middleware/auth.js";
 import { validateBody, validateParams, validateQuery } from "../../middleware/validate.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import {
@@ -38,7 +38,7 @@ router.get(
 
 router.get(
   "/cancelled",
-  authorize("ADMIN"),
+  authorizePermission("billing:cancel"),
   asyncHandler(async (_req, res) => {
     const result = await listCancelledInvoices();
     res.json(result);
@@ -56,7 +56,7 @@ router.get(
 
 router.delete(
   "/:id",
-  authorize("ADMIN"),
+  authorizePermission("billing:cancel"),
   validateParams(idParamsSchema),
   asyncHandler(async (req: AuthenticatedRequest, res) => {
     const result = await cancelInvoice(Number((req.params as { id: string }).id), req);

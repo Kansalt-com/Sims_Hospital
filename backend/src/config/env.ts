@@ -55,4 +55,7 @@ export const env = {
   migrationsDir: process.env.MIGRATIONS_DIR ? resolvePathMaybe(process.env.MIGRATIONS_DIR) : path.resolve(process.cwd(), "prisma", "migrations"),
   logDir: process.env.LOG_DIR ? resolvePathMaybe(process.env.LOG_DIR) : path.resolve(process.cwd(), "logs"),
   enableFileLogging: parseBoolean(process.env.ENABLE_FILE_LOGGING, true),
+  initialAdminName: process.env.INITIAL_ADMIN_NAME?.trim() || undefined,
+  initialAdminUsername: process.env.INITIAL_ADMIN_USERNAME?.trim() || undefined,
+  initialAdminPassword: process.env.INITIAL_ADMIN_PASSWORD || undefined,
 };

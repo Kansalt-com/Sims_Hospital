@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import dayjs from "dayjs";
 import { prisma } from "../../db/prisma.js";
 import type { AuthenticatedRequest } from "../../middleware/auth.js";
@@ -201,7 +202,7 @@ export const createVisit = async (payload: CreateVisitInput, req: AuthenticatedR
   const settings = await prisma.hospitalSettings.findUnique({ where: { id: 1 } });
   const defaultFee = settings?.defaultConsultationFee ?? 500;
 
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const patientId = payload.patientId
       ? payload.patientId
       : (
@@ -457,7 +458,7 @@ export const transferOpdVisitToIpd = async (visitId: number, payload: TransferTo
     throw new AppError("Attending doctor not found", 400, "DOCTOR_NOT_FOUND");
   }
 
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const selectedBed = await assertBedAvailability(tx, payload.roomId, payload.bedId);
 
     const ipdVisit = await tx.visit.create({

@@ -14,8 +14,8 @@ export const LoginPage = () => {
   const navigate = useNavigate();
   const { login, user } = useAuth();
   const { branding } = useBranding();
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("Admin@12345");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const logoSrc = useMemo(
@@ -108,11 +108,6 @@ export const LoginPage = () => {
           <Button type="submit" className="mt-6 w-full" disabled={loading}>
             {loading ? "Signing in..." : "Login"}
           </Button>
-
-          <div className="mt-6 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
-            <p>Default admin login: admin / Admin@12345</p>
-          </div>
-
           <PoweredByKansalt className="mt-4 justify-center text-xs text-slate-500 lg:hidden" />
         </form>
       </div>

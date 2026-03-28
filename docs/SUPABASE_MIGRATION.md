@@ -59,6 +59,9 @@ Set these app settings:
 DATABASE_URL=<supabase-postgres-url>
 DIRECT_URL=<supabase-direct-url>
 PRISMA_SCHEMA_SYNC_MODE=dbpush
+INITIAL_ADMIN_NAME=<initial-admin-name>
+INITIAL_ADMIN_USERNAME=<initial-admin-username>
+INITIAL_ADMIN_PASSWORD=<initial-admin-password>
 UPLOAD_DIR_PATH=/home/site/uploads
 LOG_DIR=/home/site/logs
 ```
@@ -83,16 +86,15 @@ APP_BASE_PATH=/hms/sims/ \
 ./deployment/scripts/deploy-vps.sh
 ```
 
-## Data migration note
+## Fresh empty database note
 
-The existing production data currently lives in SQLite. This document prepares the codebase and deployment for Supabase, but the actual data copy must be run as a one-time migration step from the live SQLite database into Supabase before cutover.
+If you are starting with a fresh empty Supabase database, no legacy data import is required.
 
-For a safe cutover:
+For a clean bootstrap:
 
-1. Freeze writes briefly
-2. Export the SQLite data
-3. Import into Supabase
-4. Point `DATABASE_URL` to Supabase
-5. Boot the app with `PRISMA_SCHEMA_SYNC_MODE=dbpush`
-6. Verify `/api/health`
-7. Change `PRISMA_SCHEMA_SYNC_MODE=none`
+1. Point `DATABASE_URL` and `DIRECT_URL` to Supabase
+2. Set `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD`
+3. Boot the app with `PRISMA_SCHEMA_SYNC_MODE=dbpush`
+4. Sign in with the initial admin and change the password
+5. Verify `/api/health`
+6. Change `PRISMA_SCHEMA_SYNC_MODE=none`

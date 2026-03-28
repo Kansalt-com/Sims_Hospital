@@ -202,7 +202,7 @@ export const InvoiceListTable = ({
         <div className="mt-8 border-t border-slate-200 pt-6">
           <div className="mb-3">
             <h3 className="text-lg font-semibold text-slate-900">Cancelled Bills</h3>
-            <p className="text-sm text-slate-500">Visible only to the protected super-admin account for audit review.</p>
+            <p className="text-sm text-slate-500">Visible only to users with bill-cancellation permission for audit review.</p>
           </div>
 
           {cancelledInvoices.length === 0 ? (
@@ -234,7 +234,7 @@ export const InvoiceListTable = ({
                         <td className="py-3">{patientName}</td>
                         <td className="py-3">{formatCurrency(total)}</td>
                         <td className="py-3">{actorName}</td>
-                        <td className="py-3">{entry.description || "Bill cancelled by super admin"}</td>
+                        <td className="py-3">{entry.description || "Bill cancelled"}</td>
                       </tr>
                     );
                   })}
