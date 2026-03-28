@@ -6,6 +6,7 @@ import type { ServiceCatalogItem, ServiceDepartment } from "../../data/serviceCa
 import { useServiceCatalog } from "../../hooks/useServiceCatalog";
 import type {
   BillingErrors,
+  CancelledInvoiceLog,
   CatalogSelection,
   DraftBillingItem,
   ExistingInvoiceSummary,
@@ -65,6 +66,7 @@ export const useInvoices = (
   const [pageError, setPageError] = useState("");
   const [query, setQuery] = useState("");
   const [invoices, setInvoices] = useState<InvoiceListItem[]>([]);
+  const [cancelledInvoices, setCancelledInvoices] = useState<CancelledInvoiceLog[]>([]);
   const [visits, setVisits] = useState<VisitOption[]>([]);
   const [errors, setErrors] = useState<BillingErrors>(emptyErrors);
   const [visitId, setVisitId] = useState(presetVisitId);
@@ -79,16 +81,24 @@ export const useInvoices = (
   const [paymentTarget, setPaymentTarget] = useState<InvoiceListItem | null>(null);
   const [paymentDraft, setPaymentDraft] = useState<PaymentFormState>(blankPayment());
 
-  const load = async (search = query) => {
+  const load = async (search = query, options?: { includeCancelled?: boolean }) => {
     setLoading(true);
     setPageError("");
     try {
-      const [invoiceRes, visitRes] = await Promise.all([
-        invoiceApi.list({ page: 1, pageSize: 30, q: search }),
+      const tasks = [
+        invoiceApi.list({ page: 1, pageSize: 200, q: search }),
         visitApi.list({ page: 1, pageSize: 100 }),
-      ]);
+      ] as const;
+
+      const includeCancelled = Boolean(options?.includeCancelled);
+      const responses = includeCancelled
+        ? await Promise.all([...tasks, invoiceApi.listCancelled()] as const)
+        : await Promise.all(tasks);
+
+      const [invoiceRes, visitRes] = responses;
       setInvoices(invoiceRes.data.data);
       setVisits(visitRes.data.data);
+      setCancelledInvoices(includeCancelled && responses[2] ? responses[2].data.data : []);
     } catch (error) {
       const message = getErrorMessage(error);
       setPageError(message);
@@ -367,6 +377,22 @@ export const useInvoices = (
     }
   };
 
+  const cancelInvoice = async (invoice: InvoiceListItem, canViewCancelled = false) => {
+    if (!window.confirm(`Cancel bill ${invoice.invoiceNo}? This action is restricted and will be logged.`)) {
+      return false;
+    }
+
+    try {
+      await invoiceApi.cancel(invoice.id);
+      toast.success("Bill cancelled successfully");
+      await load(query, { includeCancelled: canViewCancelled });
+      return true;
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+      return false;
+    }
+  };
+
   return {
     loading,
     saving,
@@ -375,6 +401,7 @@ export const useInvoices = (
     query,
     setQuery,
     invoices,
+    cancelledInvoices,
     visits,
     errors,
     visitId,
@@ -404,6 +431,7 @@ export const useInvoices = (
     openPaymentModal,
     closePaymentModal,
     savePayment,
+    cancelInvoice,
     isNumeric,
   };
 };

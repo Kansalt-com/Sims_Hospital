@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import cors from "cors";
+import compression from "compression";
 import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
@@ -18,6 +19,7 @@ import { prescriptionsRouter } from "./modules/prescriptions/prescriptions.route
 import { reportsRouter } from "./modules/reports/reports.routes.js";
 import { roomsRouter } from "./modules/rooms/rooms.routes.js";
 import { logInfo, requestLogContext } from "./utils/logger.js";
+import { getMetricsSnapshot, recordRequestMetric } from "./utils/metrics.js";
 
 const app = express();
 
@@ -33,6 +35,7 @@ app.use(
   }),
 );
 app.use(helmet({ crossOriginResourcePolicy: false }));
+app.use(compression());
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -43,10 +46,12 @@ app.use((req, res, next) => {
   const startedAt = Date.now();
 
   res.on("finish", () => {
+    const durationMs = Date.now() - startedAt;
+    recordRequestMetric(durationMs);
     logInfo("request.completed", {
       ...requestLogContext(req),
       statusCode: res.statusCode,
-      durationMs: Date.now() - startedAt,
+      durationMs,
     });
   });
 
@@ -78,6 +83,10 @@ app.use(
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, timestamp: new Date().toISOString() });
+});
+
+app.get("/api/metrics", (_req, res) => {
+  res.json({ data: getMetricsSnapshot() });
 });
 
 app.use("/api/auth", authRouter);

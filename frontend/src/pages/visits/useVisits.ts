@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "../../api/client";
-import { doctorApi, patientApi, roomApi, visitApi } from "../../api/services";
+import { doctorApi, invoiceApi, patientApi, roomApi, visitApi } from "../../api/services";
+import { useServiceCatalog } from "../../hooks/useServiceCatalog";
 import type { Visit } from "../../types";
 import type { Bed, Room } from "../../types";
 import type { DoctorOption, PatientOption, TransferFormState, VisitFormState, VisitQueueItem } from "./visitTypes";
@@ -26,6 +27,7 @@ const initialVisitForm: VisitFormState = {
 };
 
 export const useVisits = () => {
+  const { catalog } = useServiceCatalog();
   const [rows, setRows] = useState<VisitQueueItem[]>([]);
   const [doctors, setDoctors] = useState<DoctorOption[]>([]);
   const [patients, setPatients] = useState<PatientOption[]>([]);
@@ -96,7 +98,7 @@ export const useVisits = () => {
     }));
   }, [selectedTransferRoom, transferForm.bedId, availableBeds]);
 
-  const createVisit = async (): Promise<Visit | null> => {
+  const createVisit = async (): Promise<{ visit: Visit; invoiceId?: number } | null> => {
     setSaving(true);
     try {
       const payload = {
@@ -123,6 +125,40 @@ export const useVisits = () => {
       };
 
       const response = await visitApi.create(payload);
+      const createdVisit = response.data.data;
+      let createdInvoiceId: number | undefined;
+
+      if (form.visitPurpose === "LAB_ONLY" && form.selectedCatalogItemId) {
+        const selectedItem = catalog.find((item) => item.id === form.selectedCatalogItemId);
+
+        if (selectedItem) {
+          const invoiceResponse = await invoiceApi.create({
+            visitId: createdVisit.id,
+            invoiceType: "LAB",
+            items: [
+              {
+                category:
+                  selectedItem.department === "XRAY" || selectedItem.department === "ULTRASOUND"
+                    ? "RADIOLOGY"
+                    : selectedItem.category,
+                name: selectedItem.name,
+                qty: 1,
+                unitPrice: selectedItem.price,
+              },
+            ],
+            payments: [
+              {
+                paymentMode: "CASH",
+                amount: selectedItem.price,
+              },
+            ],
+            notes: "Generated automatically for lab-only OPD visit",
+          });
+
+          createdInvoiceId = invoiceResponse.data.data.id;
+        }
+      }
+
       toast.success("OPD visit created");
       setForm((prev) => ({
         ...prev,
@@ -139,8 +175,8 @@ export const useVisits = () => {
         newAddress: "",
         newIdProof: "",
       }));
-      await load();
-      return response.data.data;
+      void load();
+      return { visit: createdVisit, invoiceId: createdInvoiceId };
     } catch (error) {
       toast.error(getErrorMessage(error));
       return null;

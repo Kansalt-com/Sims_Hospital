@@ -11,6 +11,7 @@ import { Button } from "../../components/ui/Button";
 import { Loader } from "../../components/ui/Loader";
 import { useServiceCatalog } from "../../hooks/useServiceCatalog";
 import type { HospitalSettings, Invoice, InvoiceItem } from "../../types";
+import { buildPublicAssetPath } from "../../utils/branding";
 import { formatCurrency, formatDate, formatDateTime } from "../../utils/format";
 import "../../styles/print.css";
 
@@ -138,6 +139,12 @@ const buildSections = (invoice: Invoice, costBreakupMap: Map<string, string[]>):
   }));
 };
 
+const buildOpdReceiptItems = (invoice: Invoice) => {
+  const billableItems = invoice.items.filter((item) => Number(item.amount || item.unitPrice * item.qty) > 0);
+  const serviceItems = billableItems.filter((item) => item.category !== "CONSULTATION");
+  return serviceItems.length > 0 ? serviceItems : billableItems;
+};
+
 export const InvoicePrintPage = () => {
   const { catalog } = useServiceCatalog();
   const location = useLocation();
@@ -148,6 +155,7 @@ export const InvoicePrintPage = () => {
 
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+  const [markingPaid, setMarkingPaid] = useState(false);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [settings, setSettings] = useState<HospitalSettings | null>(null);
 
@@ -181,6 +189,9 @@ export const InvoicePrintPage = () => {
   );
 
   const sections = useMemo(() => (invoice ? buildSections(invoice, costBreakupMap) : []), [invoice, costBreakupMap]);
+  const opdReceiptItems = useMemo(() => (invoice ? buildOpdReceiptItems(invoice) : []), [invoice]);
+  const isOpdReceipt = invoice?.invoiceType === "OPD";
+  const bannerSrc = buildPublicAssetPath("assets/branding/prescription-banner.png");
 
   const leftDetails = useMemo(() => {
     if (!invoice) {
@@ -254,6 +265,35 @@ export const InvoicePrintPage = () => {
     }
   };
 
+  const handleMarkPaidAndPrint = async () => {
+    if (!invoice || Number(invoice.dueAmount || 0) <= 0) {
+      window.print();
+      return;
+    }
+
+    setMarkingPaid(true);
+    try {
+      await invoiceApi.addPayments(invoice.id, {
+        payments: [
+          {
+            paymentMode: invoice.paymentMode ?? "CASH",
+            amount: Number(invoice.dueAmount),
+          },
+        ],
+      });
+
+      const refreshed = await invoiceApi.get(invoice.id);
+      setInvoice(refreshed.data.data);
+      setSettings(refreshed.data.settings);
+      toast.success("Bill marked paid");
+      window.print();
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setMarkingPaid(false);
+    }
+  };
+
   if (loading) {
     return <Loader text="Loading bill..." />;
   }
@@ -270,25 +310,95 @@ export const InvoicePrintPage = () => {
           <p className="text-sm text-slate-500">SIMS bill layout for print, PDF export, and patient sharing.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => window.print()}>Print Bill</Button>
+          <Button onClick={handleMarkPaidAndPrint} disabled={markingPaid}>
+            {markingPaid
+              ? "Marking Paid..."
+              : Number(invoice.dueAmount || 0) > 0
+                ? "Mark Paid & Print"
+                : "Print Bill"}
+          </Button>
+          {invoice.visit.type === "OPD" ? (
+            <Link to={`/prescriptions/${invoice.visit.id}/print`} state={{ backTo: backTo || `/invoices/${invoice.id}/print` }}>
+              <Button variant="secondary">Print Prescription</Button>
+            </Link>
+          ) : null}
           <Button variant="secondary" onClick={handleDownload} disabled={downloading}>
             {downloading ? "Preparing PDF..." : "Download Bill"}
           </Button>
+          <Link to={`/invoices?visitId=${invoice.visit.id}`} state={{ backTo: `/invoices/${invoice.id}/print` }}>
+            <Button variant="secondary">Back to Billing</Button>
+          </Link>
           <Link to={backTo}>
             <Button variant="ghost">Back</Button>
           </Link>
         </div>
       </div>
 
-      <div ref={printRef} className="print-sheet-a4 bill-print-shell">
-        <BillLayout
-          leftDetails={leftDetails}
-          rightDetails={rightDetails}
-          sections={sections}
-          total={formatCurrency(invoice.subtotal + invoice.tax)}
-          discount={formatCurrency(invoice.discount)}
-          net={formatCurrency(invoice.total)}
-        />
+      <div ref={printRef} className={isOpdReceipt ? "print-sheet-thermal" : "print-sheet-a4 bill-print-shell"}>
+        {isOpdReceipt ? (
+          <article className="mx-auto w-[80mm] overflow-hidden border border-black bg-white text-slate-900">
+            <img src={bannerSrc} alt="SIMS bill banner" className="block w-full" />
+            <div className="border-b border-black px-3 py-2 text-center">
+              <h2 className="text-[14px] font-bold uppercase">OPD Bill</h2>
+              <p className="text-[10px]">{invoice.invoiceNo}</p>
+              <p className="text-[10px]">{formatDateTime(invoice.createdAt)}</p>
+            </div>
+
+            <div className="border-b border-black px-3 py-2 text-[11px]">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-semibold">Patient</span>
+                <span className="text-right">{invoice.visit.patient.name}</span>
+              </div>
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <span className="font-semibold">MRN</span>
+                <span className="text-right">{invoice.visit.patient.mrn}</span>
+              </div>
+            </div>
+
+            <table className="w-full border-collapse text-[11px]">
+              <thead>
+                <tr className="bg-[#d9d9d9]">
+                  <th className="border-b border-black px-2 py-1 text-left">Service</th>
+                  <th className="border-b border-l border-black px-2 py-1 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {opdReceiptItems.map((item, index) => (
+                  <tr key={`${item.name}-${index}`} className={index % 2 === 0 ? "bg-white" : "bg-[#f8f8f8]"}>
+                    <td className="border-b border-black px-2 py-1">{item.name}</td>
+                    <td className="border-b border-l border-black px-2 py-1 text-right">
+                      {formatCurrency(item.amount || item.unitPrice * item.qty)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="px-3 py-2 text-[11px]">
+              <div className="flex items-center justify-between">
+                <span>Total</span>
+                <span className="font-semibold">{formatCurrency(invoice.total)}</span>
+              </div>
+              <div className="mt-1 flex items-center justify-between">
+                <span>Paid</span>
+                <span className="font-semibold">{formatCurrency(invoice.paidAmount)}</span>
+              </div>
+              <div className="mt-1 flex items-center justify-between">
+                <span>Due</span>
+                <span className="font-semibold">{formatCurrency(invoice.dueAmount)}</span>
+              </div>
+            </div>
+          </article>
+        ) : (
+          <BillLayout
+            leftDetails={leftDetails}
+            rightDetails={rightDetails}
+            sections={sections}
+            total={formatCurrency(invoice.subtotal + invoice.tax)}
+            discount={formatCurrency(invoice.discount)}
+            net={formatCurrency(invoice.total)}
+          />
+        )}
       </div>
     </div>
   );

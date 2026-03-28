@@ -25,7 +25,7 @@ const hospitalMeta = {
 
 export const BillLayout = ({ leftDetails, rightDetails, sections, total, discount, net }: BillLayoutProps) => {
   return (
-    <article className="sims-bill-sheet relative mx-auto w-full max-w-[980px] bg-white text-slate-900 shadow-[0_14px_48px_rgba(15,23,42,0.12)] print:max-w-none print:shadow-none">
+    <article className="sims-bill-sheet relative w-full bg-white text-slate-900 shadow-[0_14px_48px_rgba(15,23,42,0.12)] print:max-w-none print:shadow-none">
       <div className="relative border border-black">
         <BillHeader {...hospitalMeta} />
 

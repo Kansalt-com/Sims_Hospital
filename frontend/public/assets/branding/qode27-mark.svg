@@ -1,0 +1,19 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(128 128) rotate(90) scale(128)">
+      <stop stop-color="#0B3C74"/>
+      <stop offset="1" stop-color="#0A1432"/>
+    </radialGradient>
+    <linearGradient id="qblue" x1="48" y1="52" x2="154" y2="196" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#19C6FF"/>
+      <stop offset="1" stop-color="#365CFF"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="138" y1="82" x2="208" y2="190" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFE5A0"/>
+      <stop offset="1" stop-color="#D39B2E"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="28" fill="url(#bg)"/>
+  <path d="M126 48C79.62 48 42 85.62 42 132C42 178.38 79.62 216 126 216C143.58 216 159.9 210.59 173.39 201.34L187.5 215.43L203.57 199.37L189.52 185.31C198.74 171.82 204.12 155.53 204.12 138V124H150V146H178.92C173.38 173.64 151.35 194.66 124 194.66C93.4 194.66 68.34 169.6 68.34 139C68.34 108.4 93.4 83.34 124 83.34C138.88 83.34 152.36 89.22 162.42 98.77L178.58 82.61C164.29 68.53 145.01 60 124 60V48H126Z" fill="url(#qblue)"/>
+  <path d="M157 77H184.62L171.94 104.78H197.4L167.15 143.39H185.43L139 197V161.11H116.79L145.66 122.71H123.2L157 77Z" fill="url(#gold)"/>
+</svg>

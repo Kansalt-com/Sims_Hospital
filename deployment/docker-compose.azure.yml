@@ -12,18 +12,17 @@ services:
       NODE_ENV: production
       PORT: 4000
       JWT_SECRET: ${JWT_SECRET}
-      DATABASE_URL: ${DATABASE_URL:-file:/app/data/sims.db}
+      DATABASE_URL: ${DATABASE_URL}
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
       FRONTEND_DIST_DIR: /app/frontend-dist
       UPLOAD_DIR_PATH: /app/uploads
       LOG_DIR: /app/logs
       ENABLE_FILE_LOGGING: "true"
+      PRISMA_SCHEMA_SYNC_MODE: ${PRISMA_SCHEMA_SYNC_MODE:-dbpush}
     volumes:
-      - hospital-data:/app/data
       - hospital-uploads:/app/uploads
       - hospital-logs:/app/logs
 
 volumes:
-  hospital-data:
   hospital-uploads:
   hospital-logs:

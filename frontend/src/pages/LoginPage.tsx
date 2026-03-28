@@ -76,7 +76,11 @@ export const LoginPage = () => {
           </p>
         </div>
 
-        <PoweredByKansalt className="text-blue-100" labelClassName="text-blue-100" logoClassName="h-5" />
+        <PoweredByKansalt
+          className="powered-by-kansalt--hero text-blue-100"
+          labelClassName="text-blue-100"
+          logoClassName="opacity-95 mix-blend-screen"
+        />
       </div>
 
       <div className="flex items-center justify-center p-6">
@@ -109,7 +113,7 @@ export const LoginPage = () => {
             <p>Default admin login: admin / Admin@12345</p>
           </div>
 
-          <PoweredByKansalt className="mt-4 justify-center text-xs text-slate-500 lg:hidden" logoClassName="h-4" />
+          <PoweredByKansalt className="mt-4 justify-center text-xs text-slate-500 lg:hidden" />
         </form>
       </div>
     </div>

@@ -1,8 +1,9 @@
 ﻿import dayjs from "dayjs";
+import { randomBytes } from "node:crypto";
 
 export const generateMrn = () => {
-  const ts = dayjs().format("YYYYMMDDHHmmss");
-  const rand = Math.floor(100 + Math.random() * 900);
+  const ts = dayjs().format("YYYYMMDDHHmmssSSS");
+  const rand = randomBytes(3).toString("hex").toUpperCase();
   return `MRN-${ts}-${rand}`;
 };
 

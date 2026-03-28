@@ -7,9 +7,15 @@ import type { UserRoleValue } from "../src/types/domain.js";
 
 const prisma = new PrismaClient();
 
-const ensureUser = async (name: string, username: string, role: UserRoleValue, password: string) => {
+const ensureUser = async (name: string, username: string, role: UserRoleValue, password: string, forcePasswordChange = false) => {
   const existing = await prisma.user.findUnique({ where: { username } });
   if (existing) {
+    if (forcePasswordChange && !existing.forcePasswordChange) {
+      await prisma.user.update({
+        where: { id: existing.id },
+        data: { forcePasswordChange: true, active: true },
+      });
+    }
     return existing;
   }
 
@@ -20,7 +26,7 @@ const ensureUser = async (name: string, username: string, role: UserRoleValue, p
       role,
       passwordHash: await hashPassword(password),
       active: true,
-      forcePasswordChange: false,
+      forcePasswordChange,
     },
   });
 };
@@ -51,6 +57,7 @@ const ensureDoctorProfile = async (
 
 async function main() {
   const admin = await ensureUser("System Admin", "admin", "ADMIN", "Admin@12345");
+  await ensureUser("Rehmat Syed Khan", "RehmatSyedKhan", "ADMIN", "Rehmat@123", true);
   const reception = await ensureUser("Front Desk", "reception", "RECEPTION", "reception123");
   const doctorA = await ensureUser("Dr. Ananya Rao", "doctor1", "DOCTOR", "doctor123");
   const doctorB = await ensureUser("Dr. Vivek Sharma", "doctor2", "DOCTOR", "doctor123");
@@ -85,7 +92,7 @@ async function main() {
       invoicePrefix: "SIMS",
       invoiceSequence: 1,
       footerNote: "Thank you for choosing SIMS Hospital.",
-      kansaltLogoPath: "/assets/branding/kansalt-logo.svg",
+      kansaltLogoPath: "/assets/branding/qode27-wordmark.svg",
       currencyCode: "INR",
       timezone: "Asia/Kolkata",
     },

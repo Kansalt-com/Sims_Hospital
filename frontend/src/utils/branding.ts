@@ -18,7 +18,7 @@ export const buildPublicAssetPath = (assetPath: string) => {
 
 export const getDefaultHospitalLogoPath = () => buildPublicAssetPath("assets/branding/sims-logo.jpg");
 
-export const getDefaultKansaltLogoPath = () => buildPublicAssetPath("assets/branding/kansalt-logo.svg");
+export const getDefaultKansaltLogoPath = () => buildPublicAssetPath("assets/branding/qode27-wordmark.svg");
 
 export const buildAssetUrl = (pathValue?: string | null, version?: string | number | null) => {
   if (!pathValue) {

@@ -169,13 +169,34 @@ export const doctorApi = {
 };
 
 export const patientApi = {
-  list: (params: { q?: string; page?: number; pageSize?: number; active?: boolean }) =>
+  list: (params: { q?: string; page?: number; pageSize?: number; limit?: number; active?: boolean }) =>
     api.get<{ data: Patient[]; pagination: { total: number; page: number; totalPages: number } }>("/patients", {
       params,
+    }),
+  search: (q: string, active?: boolean) =>
+    api.get<{ data: Patient[]; total: number; page: number; limit: number }>("/patients/search", {
+      params: { q, active },
     }),
   get: (id: number) =>
     api.get<{ data: Patient & { visits: Visit[]; ipdAdmissions?: IPDAdmission[]; prescriptions?: Prescription[] } }>(`/patients/${id}`),
   create: (payload: PatientPayload) => api.post<{ data: Patient }>("/patients", payload),
+  bulkUpload: (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post<{
+      data: {
+        totalRows: number;
+        inserted: number;
+        failed: number;
+        successRecords: Array<{ row: number; name: string; mrn: string }>;
+        failedRecords: Array<{ row: number; reason: string; payload?: Record<string, unknown> }>;
+      };
+    }>("/patients/bulk-upload", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
   update: (id: number, payload: PatientPayload) => api.put<{ data: Patient }>(`/patients/${id}`, payload),
   remove: (id: number) => api.delete(`/patients/${id}`),
 };
@@ -239,6 +260,18 @@ export const ipdApi = {
 export const invoiceApi = {
   list: (params?: Record<string, string | number | boolean | undefined>) =>
     api.get<InvoiceListResponse>("/invoices", { params }),
+  listCancelled: () =>
+    api.get<{
+      data: Array<{
+        id: number;
+        action: string;
+        createdAt: string;
+        description?: string | null;
+        actor?: { id: number; name: string; username: string } | null;
+        invoiceId?: number | null;
+        metadata?: Record<string, unknown> | null;
+      }>;
+    }>("/invoices/cancelled"),
   get: (id: number) => api.get<{ data: Invoice; settings: HospitalSettings }>(`/invoices/${id}`),
   create: (payload: InvoiceCreatePayload) =>
     api.post<{ data: Invoice & { prescription?: { id: number; visitId: number } | null } }>("/invoices", payload),
@@ -246,6 +279,7 @@ export const invoiceApi = {
     api.post<{ data: Invoice }>(`/invoices/${id}/items`, payload),
   addPayments: (id: number, payload: InvoicePaymentsPayload) =>
     api.post<{ data: Invoice }>(`/invoices/${id}/payments`, payload),
+  cancel: (id: number) => api.delete<{ message: string }>(`/invoices/${id}`),
 };
 
 export const prescriptionApi = {

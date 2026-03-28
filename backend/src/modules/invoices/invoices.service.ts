@@ -79,6 +79,46 @@ export const listInvoices = async (query: InvoiceListQuery) => {
   };
 };
 
+export const listCancelledInvoices = async () => {
+  const rows = await prisma.auditLog.findMany({
+    where: {
+      action: "invoice.cancel",
+      entityType: "invoice",
+    },
+    include: {
+      actor: {
+        select: {
+          id: true,
+          name: true,
+          username: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return {
+    data: rows.map((row) => {
+      let metadata: Record<string, unknown> | null = null;
+      try {
+        metadata = row.metadataJson ? (JSON.parse(row.metadataJson) as Record<string, unknown>) : null;
+      } catch {
+        metadata = null;
+      }
+
+      return {
+        id: row.id,
+        action: row.action,
+        createdAt: row.createdAt,
+        description: row.description,
+        actor: row.actor,
+        invoiceId: row.invoiceId,
+        metadata,
+      };
+    }),
+  };
+};
+
 export const getInvoiceById = async (invoiceId: number) => {
   const invoice = await prisma.invoice.findUnique({
     where: { id: invoiceId },
@@ -449,4 +489,71 @@ export const addInvoiceItems = async (invoiceId: number, payload: AppendInvoiceI
 
     return updated;
   });
+};
+
+export const cancelInvoice = async (invoiceId: number, req: AuthenticatedRequest) => {
+  if (req.user?.username !== "RehmatSyedKhan") {
+    throw new AppError("Only super admin can cancel or delete bills", 403, "SUPER_ADMIN_REQUIRED");
+  }
+
+  const invoice = await prisma.invoice.findUnique({
+    where: { id: invoiceId },
+    include: {
+      items: true,
+      payments: true,
+      patient: true,
+      doctor: { select: { id: true, name: true } },
+      visit: {
+        include: {
+          patient: true,
+          doctor: { select: { id: true, name: true } },
+        },
+      },
+      prescription: true,
+    },
+  });
+
+  if (!invoice) {
+    throw new AppError("Invoice not found", 404, "INVOICE_NOT_FOUND");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await writeAuditLog({
+      actorId: req.user?.id,
+      action: "invoice.cancel",
+      entityType: "invoice",
+      entityId: invoice.id,
+      description: `Invoice ${invoice.invoiceNo} cancelled by super admin`,
+      patientId: invoice.patientId,
+      visitId: invoice.visitId,
+      invoiceId: invoice.id,
+      request: req,
+      metadata: {
+        invoiceNo: invoice.invoiceNo,
+        invoiceType: invoice.invoiceType,
+        paymentStatus: invoice.paymentStatus,
+        total: invoice.total,
+        paidAmount: invoice.paidAmount,
+        dueAmount: invoice.dueAmount,
+        patientName: invoice.patient.name,
+        doctorName: invoice.doctor.name,
+        items: invoice.items,
+        payments: invoice.payments,
+      },
+      client: tx,
+    });
+
+    if (invoice.prescription?.id) {
+      await tx.prescription.update({
+        where: { id: invoice.prescription.id },
+        data: { invoiceId: null },
+      });
+    }
+
+    await tx.invoice.delete({
+      where: { id: invoice.id },
+    });
+  });
+
+  return { message: "Invoice cancelled successfully" };
 };

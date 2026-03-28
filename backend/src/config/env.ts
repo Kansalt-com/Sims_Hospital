@@ -23,7 +23,9 @@ const parseBoolean = (value: string | undefined, fallback: boolean) => {
 
 const defaultUploadDir = path.resolve(process.cwd(), "uploads");
 
-const databaseUrl = process.env.DATABASE_URL ?? "file:./prisma/sims.db";
+const databaseUrl =
+  process.env.DATABASE_URL ??
+  "postgresql://postgres:postgres@127.0.0.1:54322/postgres?schema=public";
 const corsOrigin = process.env.CORS_ORIGIN ?? (nodeEnv === "production" ? "" : "*");
 
 if (nodeEnv === "production") {
@@ -33,6 +35,10 @@ if (nodeEnv === "production") {
 
   if (!corsOrigin || corsOrigin === "*") {
     throw new Error("CORS_ORIGIN must be explicitly configured in production.");
+  }
+
+  if (!databaseUrl.startsWith("postgres")) {
+    throw new Error("DATABASE_URL must point to a PostgreSQL database in production.");
   }
 }
 

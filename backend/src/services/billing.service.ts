@@ -98,7 +98,7 @@ export const createInvoiceNumber = async (tx: Prisma.TransactionClient) => {
         invoicePrefix: "SIMS",
         invoiceSequence: 1,
         footerNote: "Thank you for choosing SIMS Hospital.",
-        kansaltLogoPath: "/assets/branding/kansalt-logo.svg",
+        kansaltLogoPath: "/assets/branding/qode27-wordmark.svg",
       },
     }));
 

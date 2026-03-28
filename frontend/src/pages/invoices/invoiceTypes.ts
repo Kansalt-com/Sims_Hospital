@@ -19,6 +19,16 @@ export type BillingErrors = {
 
 export type InvoiceListItem = Invoice;
 
+export type CancelledInvoiceLog = {
+  id: number;
+  action: string;
+  createdAt: string;
+  description?: string | null;
+  actor?: { id: number; name: string; username: string } | null;
+  invoiceId?: number | null;
+  metadata?: Record<string, unknown> | null;
+};
+
 export type DraftBillingItem = {
   id: string;
   name: string;

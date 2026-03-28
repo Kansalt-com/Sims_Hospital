@@ -35,7 +35,7 @@ const AUTH_EVENT = "auth:unauthorized";
 
 export const api = axios.create({
   baseURL,
-  timeout: 15000,
+  timeout: 30000,
 });
 
 const isTokenExpired = (token: string) => {

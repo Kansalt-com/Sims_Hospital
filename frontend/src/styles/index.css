@@ -111,8 +111,15 @@ button:disabled {
 .powered-by-kansalt {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 14px;
   white-space: nowrap;
+}
+
+.powered-by-kansalt__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
 }
 
 .powered-by-kansalt--stacked {
@@ -123,7 +130,7 @@ button:disabled {
 
 .powered-by-kansalt__label {
   color: #64748b;
-  font-size: 0.76rem;
+  font-size: 0.88rem;
   line-height: 1;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -132,16 +139,24 @@ button:disabled {
 
 .powered-by-kansalt__logo {
   width: auto;
-  height: 22px;
+  height: 58px;
+  max-width: min(42vw, 320px);
+  object-fit: contain;
+}
+
+.powered-by-kansalt__mark {
+  width: auto;
+  height: 66px;
+  max-width: min(18vw, 110px);
   object-fit: contain;
 }
 
 .app-footer {
-  height: 50px;
+  min-height: 110px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 20px;
+  padding: 16px 24px;
   border-top: 1px solid #e5e7eb;
   background: #ffffff;
   font-size: 13px;
@@ -153,25 +168,50 @@ button:disabled {
 }
 
 .app-footer__powered-by {
-  gap: 8px;
+  gap: 14px;
+  align-items: center;
 }
 
 .app-footer__label {
-  font-size: 11px;
+  font-size: 14px;
   letter-spacing: 0.08em;
 }
 
 .app-footer__logo {
-  height: 18px;
+  height: 70px;
+  max-width: 420px;
+}
+
+.app-footer__powered-by .powered-by-kansalt__mark {
+  height: 82px;
+  max-width: 130px;
+}
+
+.app-footer__powered-by .powered-by-kansalt__brand {
+  gap: 16px;
+}
+
+.powered-by-kansalt--hero .powered-by-kansalt__label {
+  font-size: 1.08rem;
+}
+
+.powered-by-kansalt--hero .powered-by-kansalt__logo {
+  height: 110px;
+  max-width: min(42vw, 560px);
+}
+
+.powered-by-kansalt--hero .powered-by-kansalt__mark {
+  height: 120px;
+  max-width: min(16vw, 170px);
 }
 
 @media (max-width: 1180px) {
   .app-footer {
     flex-direction: column;
     justify-content: center;
-    gap: 4px;
+    gap: 8px;
     height: auto;
-    padding: 12px 20px;
+    padding: 14px 18px;
   }
 }
 
@@ -195,7 +235,33 @@ button:disabled {
   }
 
   .powered-by-kansalt__logo {
-    height: 18px;
+    height: 36px;
+    max-width: 220px;
+  }
+
+  .powered-by-kansalt__mark {
+    height: 42px;
+    max-width: 82px;
+  }
+
+  .powered-by-kansalt--hero .powered-by-kansalt__logo {
+    height: 72px;
+    max-width: 320px;
+  }
+
+  .powered-by-kansalt--hero .powered-by-kansalt__mark {
+    height: 78px;
+    max-width: 110px;
+  }
+
+  .app-footer__logo {
+    height: 52px;
+    max-width: 300px;
+  }
+
+  .app-footer__powered-by .powered-by-kansalt__mark {
+    height: 60px;
+    max-width: 90px;
   }
 }
 

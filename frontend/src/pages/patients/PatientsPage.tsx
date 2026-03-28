@@ -3,13 +3,14 @@ import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
 import { getErrorMessage } from "../../api/client";
 import { patientApi } from "../../api/services";
+import { PageSkeleton } from "../../components/ui/PageSkeleton";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Input } from "../../components/ui/Input";
-import { Loader } from "../../components/ui/Loader";
 import { Select } from "../../components/ui/Select";
 import { useAuth } from "../../context/AuthContext";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { Patient } from "../../types";
 import { formatDateTime } from "../../utils/format";
 
@@ -43,8 +44,10 @@ export const PatientsPage = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [formOpen, setFormOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [editing, setEditing] = useState<Patient | null>(null);
   const [form, setForm] = useState<PatientForm>(defaultForm);
+  const debouncedSearch = useDebouncedValue(search, 300);
 
   const canEdit = useMemo(() => user?.role === "ADMIN" || user?.role === "RECEPTION", [user?.role]);
   const filteredRows = useMemo(
@@ -55,7 +58,7 @@ export const PatientsPage = () => {
   const load = async (nextPage = page, query = search) => {
     setLoading(true);
     try {
-      const res = await patientApi.list({ page: nextPage, pageSize: 10, q: query });
+      const res = await patientApi.list({ page: nextPage, limit: 20, q: query });
       setRows(res.data.data);
       setTotalPages(res.data.pagination.totalPages || 1);
       setPage(nextPage);
@@ -69,6 +72,10 @@ export const PatientsPage = () => {
   useEffect(() => {
     load(1, "");
   }, []);
+
+  useEffect(() => {
+    load(1, debouncedSearch);
+  }, [debouncedSearch]);
 
   const resetForm = () => {
     setForm(defaultForm);
@@ -134,6 +141,26 @@ export const PatientsPage = () => {
     setFormOpen(true);
   };
 
+  const onBulkUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) {
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const res = await patientApi.bulkUpload(file);
+      const summary = res.data.data;
+      toast.success(`Bulk upload complete. Inserted ${summary.inserted}, failed ${summary.failed}.`);
+      await load(1, debouncedSearch);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -142,14 +169,20 @@ export const PatientsPage = () => {
           <p className="text-sm text-slate-500">Search and maintain complete patient records.</p>
         </div>
         {canEdit ? (
-          <Button
-            onClick={() => {
-              resetForm();
-              setFormOpen((prev) => !prev);
-            }}
-          >
-            {formOpen ? "Close Form" : "+ New Patient"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <label className="inline-flex cursor-pointer items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">
+              {uploading ? "Uploading..." : "Bulk Upload Excel"}
+              <input type="file" accept=".xlsx,.xls" className="hidden" onChange={onBulkUpload} disabled={uploading} />
+            </label>
+            <Button
+              onClick={() => {
+                resetForm();
+                setFormOpen((prev) => !prev);
+              }}
+            >
+              {formOpen ? "Close Form" : "+ New Patient"}
+            </Button>
+          </div>
         ) : null}
       </div>
 
@@ -247,9 +280,9 @@ export const PatientsPage = () => {
       ) : null}
 
       <Card>
-        {loading ? (
-          <Loader />
-        ) : filteredRows.length === 0 ? (
+      {loading ? (
+        <PageSkeleton rows={8} />
+      ) : filteredRows.length === 0 ? (
           <EmptyState text="No patients found." />
         ) : (
           <div className="overflow-x-auto">

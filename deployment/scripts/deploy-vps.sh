@@ -32,7 +32,7 @@ git fetch origin
 git checkout "${APP_BRANCH}"
 git reset --hard "origin/${APP_BRANCH}"
 
-mkdir -p backend/data backend/uploads backend/logs
+mkdir -p backend/uploads backend/logs
 APP_BASE_PATH="$(normalize_base_path "${APP_BASE_PATH}")"
 APP_BASE_PREFIX="${APP_BASE_PATH%/}"
 if [[ "${APP_BASE_PREFIX}" == "" ]]; then
@@ -64,7 +64,11 @@ fi
 cd backend
 npm ci
 npx prisma generate
-npx prisma migrate deploy
+if [[ "${PRISMA_SCHEMA_SYNC_MODE:-dbpush}" == "migrate" ]]; then
+  npx prisma migrate deploy
+else
+  npx prisma db push
+fi
 npm run build
 pm2 startOrReload ecosystem.config.cjs --env production
 pm2 save

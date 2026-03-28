@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import type { ServiceDepartment } from "../../data/serviceCatalog";
@@ -8,6 +10,7 @@ import { PaymentModal } from "./PaymentModal";
 import { useInvoices } from "./useInvoices";
 
 export const InvoicesPage = () => {
+  const { user } = useAuth();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const presetVisitId = searchParams.get("visitId") || "";
@@ -23,6 +26,7 @@ export const InvoicesPage = () => {
     query,
     setQuery,
     invoices,
+    cancelledInvoices,
     visits,
     errors,
     visitId,
@@ -52,8 +56,15 @@ export const InvoicesPage = () => {
     openPaymentModal,
     closePaymentModal,
     savePayment,
+    cancelInvoice,
     isNumeric,
   } = useInvoices(presetVisitId, presetDepartment, presetCatalogItemId);
+
+  const isSuperAdmin = user?.username === "RehmatSyedKhan";
+
+  useEffect(() => {
+    load(query, { includeCancelled: isSuperAdmin });
+  }, [isSuperAdmin]);
 
   return (
     <div className="space-y-6">
@@ -64,7 +75,7 @@ export const InvoicesPage = () => {
           <Card className="mt-4 border border-cyan-200 bg-cyan-50/70">
             <h2 className="text-lg font-semibold text-cyan-900">OPD visit created for {selectedVisit.patient.name}</h2>
             <p className="mt-1 text-sm text-cyan-800">
-              Continue directly with billing. Once the bill is saved, you can print both the bill and prescription from this screen.
+              Continue directly with billing. Once the bill is saved, print the bill first and then print the prescription immediately after it.
             </p>
           </Card>
         ) : null}
@@ -113,7 +124,7 @@ export const InvoicesPage = () => {
       {lastCreated ? (
         <Card className="border border-emerald-200 bg-emerald-50/60">
           <h3 className="text-lg font-semibold text-emerald-800">Billing updated successfully</h3>
-          <p className="mt-1 text-sm text-emerald-700">The bill for visit #{lastCreated.visitId} is ready for print and further payment collection.</p>
+          <p className="mt-1 text-sm text-emerald-700">The bill for visit #{lastCreated.visitId} is ready. Print the bill now, then print the prescription right after that.</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Link to={`/invoices/${lastCreated.invoiceId}/print`} state={{ backTo: backTo || `${location.pathname}${location.search}` }}>
               <Button>Print Invoice</Button>
@@ -129,19 +140,22 @@ export const InvoicesPage = () => {
         loading={loading}
         query={query}
         invoices={invoices}
+        cancelledInvoices={cancelledInvoices}
+        canCancelInvoices={isSuperAdmin}
         pageError={pageError}
         onQueryChange={setQuery}
-        onSearch={() => load(query)}
+        onSearch={() => load(query, { includeCancelled: isSuperAdmin })}
         onReset={() => {
           setQuery("");
-          load("");
+          load("", { includeCancelled: isSuperAdmin });
         }}
-        onRetry={() => load(query)}
+        onRetry={() => load(query, { includeCancelled: isSuperAdmin })}
         onCollectPayment={openPaymentModal}
         onAddCharges={(invoice) => {
           setVisitId(String(invoice.visitId));
           window.scrollTo({ top: 0, behavior: "smooth" });
         }}
+        onCancelInvoice={(invoice) => cancelInvoice(invoice, isSuperAdmin)}
       />
 
       <PaymentModal

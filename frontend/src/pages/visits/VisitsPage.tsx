@@ -50,9 +50,13 @@ export const VisitsPage = () => {
         onFormChange={setForm}
         onSubmit={async (event) => {
           event.preventDefault();
-          const createdVisit = await createVisit();
-          if (createdVisit) {
-            navigate(`/invoices?visitId=${createdVisit.id}`, {
+          const created = await createVisit();
+          if (created?.invoiceId) {
+            navigate(`/invoices/${created.invoiceId}/print`, {
+              state: { backTo: "/visits", source: "lab-visit-created" },
+            });
+          } else if (created?.visit) {
+            navigate(`/invoices?visitId=${created.visit.id}`, {
               state: { backTo: "/visits", source: "opd-visit-created" },
             });
           }

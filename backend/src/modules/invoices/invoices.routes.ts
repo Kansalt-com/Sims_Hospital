@@ -2,7 +2,15 @@ import { Router } from "express";
 import { authenticate, authorize, type AuthenticatedRequest } from "../../middleware/auth.js";
 import { validateBody, validateParams, validateQuery } from "../../middleware/validate.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
-import { addInvoiceItems, addInvoicePayments, createInvoice, getInvoiceById, listInvoices } from "./invoices.service.js";
+import {
+  addInvoiceItems,
+  addInvoicePayments,
+  cancelInvoice,
+  createInvoice,
+  getInvoiceById,
+  listCancelledInvoices,
+  listInvoices,
+} from "./invoices.service.js";
 import {
   addPaymentSchema,
   appendInvoiceItemsSchema,
@@ -29,10 +37,29 @@ router.get(
 );
 
 router.get(
+  "/cancelled",
+  authorize("ADMIN"),
+  asyncHandler(async (_req, res) => {
+    const result = await listCancelledInvoices();
+    res.json(result);
+  }),
+);
+
+router.get(
   "/:id",
   validateParams(idParamsSchema),
   asyncHandler(async (req, res) => {
     const result = await getInvoiceById(Number((req.params as { id: string }).id));
+    res.json(result);
+  }),
+);
+
+router.delete(
+  "/:id",
+  authorize("ADMIN"),
+  validateParams(idParamsSchema),
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const result = await cancelInvoice(Number((req.params as { id: string }).id), req);
     res.json(result);
   }),
 );

@@ -3,13 +3,11 @@ set -eu
 
 APP_ROOT="/home/site/wwwroot"
 PERSIST_ROOT="/home/site"
-RUNTIME_DB_PATH="/tmp/sims.db"
-MARKER_FILE="${PERSIST_ROOT}/.backend_deps_ready"
-LOCK_HASH_FILE="${PERSIST_ROOT}/.backend_lock_hash"
-RUNTIME_BACKEND_ROOT="${PERSIST_ROOT}/backend-runtime"
 STARTUP_LOG="${PERSIST_ROOT}/logs/startup.log"
+PRISMA_SCHEMA_SYNC_MODE="${PRISMA_SCHEMA_SYNC_MODE:-none}"
+BACKEND_ROOT="${APP_ROOT}/backend"
 
-mkdir -p "${PERSIST_ROOT}/data" "${PERSIST_ROOT}/uploads" "${PERSIST_ROOT}/logs"
+mkdir -p "${PERSIST_ROOT}/uploads" "${PERSIST_ROOT}/logs"
 
 log() {
   printf '%s %s\n' "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" "$1" | tee -a "${STARTUP_LOG}"
@@ -22,45 +20,35 @@ if [ ! -d "${APP_ROOT}/frontend-dist" ] && [ -d "${APP_ROOT}/frontend/dist" ]; t
   log "startup.seeded_frontend_dist"
 fi
 
-if [ -f "${APP_ROOT}/backend/data/sims.db" ] && [ ! -f "${PERSIST_ROOT}/data/sims.db" ]; then
-  cp "${APP_ROOT}/backend/data/sims.db" "${PERSIST_ROOT}/data/sims.db"
-  log "startup.seeded_database"
-fi
-
-if [ -f "${PERSIST_ROOT}/data/sims.db" ]; then
-  cp "${PERSIST_ROOT}/data/sims.db" "${RUNTIME_DB_PATH}"
-  export DATABASE_URL="file:${RUNTIME_DB_PATH}"
-  log "startup.prepared_runtime_database"
-fi
-
-if [ -d "${APP_ROOT}/backend/uploads" ] && [ -z "$(find "${PERSIST_ROOT}/uploads" -mindepth 1 -print -quit 2>/dev/null)" ]; then
-  cp -R "${APP_ROOT}/backend/uploads/." "${PERSIST_ROOT}/uploads/" 2>/dev/null || true
+if [ -d "${BACKEND_ROOT}/uploads" ] && [ -z "$(find "${PERSIST_ROOT}/uploads" -mindepth 1 -print -quit 2>/dev/null)" ]; then
+  cp -R "${BACKEND_ROOT}/uploads/." "${PERSIST_ROOT}/uploads/" 2>/dev/null || true
   log "startup.seeded_uploads"
 fi
 
-CURRENT_LOCK_HASH="$(sha256sum "${APP_ROOT}/backend/package-lock.json" | awk '{print $1}')"
-PREVIOUS_LOCK_HASH="$(cat "${LOCK_HASH_FILE}" 2>/dev/null || true)"
-APP_NODE_MODULES="${RUNTIME_BACKEND_ROOT}/node_modules"
+if [ ! -d "${BACKEND_ROOT}/node_modules" ]; then
+  log "startup.missing_backend_node_modules"
+  exit 1
+fi
 
-rm -rf "${RUNTIME_BACKEND_ROOT}"
-mkdir -p "${RUNTIME_BACKEND_ROOT}"
-cp -R "${APP_ROOT}/backend/." "${RUNTIME_BACKEND_ROOT}/"
-rm -rf "${RUNTIME_BACKEND_ROOT}/node_modules"
-log "startup.prepared_runtime_backend"
+if [ ! -f "${BACKEND_ROOT}/dist/src/server.js" ]; then
+  log "startup.missing_backend_dist"
+  exit 1
+fi
 
-log "startup.installing_backend_dependencies"
-npm ci --prefix "${RUNTIME_BACKEND_ROOT}" --include=dev 2>&1 | tee -a "${STARTUP_LOG}"
-(
-  cd "${RUNTIME_BACKEND_ROOT}"
-  log "startup.building_backend"
-  npm run build 2>&1 | tee -a "${STARTUP_LOG}"
-  log "startup.generating_prisma_client"
-  npx prisma generate 2>&1 | tee -a "${STARTUP_LOG}"
-)
-printf '%s' "${CURRENT_LOCK_HASH}" > "${LOCK_HASH_FILE}"
-touch "${MARKER_FILE}"
-log "startup.backend_dependencies_ready"
+if [ "${PRISMA_SCHEMA_SYNC_MODE}" = "dbpush" ]; then
+  (
+    cd "${BACKEND_ROOT}"
+    log "startup.syncing_schema_via_dbpush"
+    npx prisma db push --skip-generate 2>&1 | tee -a "${STARTUP_LOG}"
+  )
+elif [ "${PRISMA_SCHEMA_SYNC_MODE}" = "migrate" ]; then
+  (
+    cd "${BACKEND_ROOT}"
+    log "startup.applying_prisma_migrations"
+    npx prisma migrate deploy 2>&1 | tee -a "${STARTUP_LOG}"
+  )
+fi
 
-cd "${RUNTIME_BACKEND_ROOT}"
+cd "${BACKEND_ROOT}"
 log "startup.launching_server"
 exec node dist/src/server.js
