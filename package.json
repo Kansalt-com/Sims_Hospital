@@ -5,11 +5,16 @@
   "scripts": {
     "postinstall": "npm run install:deps",
     "install:deps": "npm --prefix backend install && npm --prefix frontend install && npm --prefix desktop-electron install",
+    "ci:deps": "npm --prefix backend ci && npm --prefix frontend ci",
     "dev:backend": "npm --prefix backend run dev",
     "dev:frontend": "npm --prefix frontend run dev",
     "dev:desktop": "npm --prefix desktop-electron run dev",
     "build:backend": "npm --prefix backend run build",
     "build:frontend": "npm --prefix frontend run build",
+    "build:frontend:public": "npm --prefix frontend run build:backend-public",
+    "build:monolith": "npm --prefix backend run prisma:generate && npm run build:frontend:public && npm run build:backend",
+    "package:monolith": "node scripts/package-monolith.mjs",
+    "artifact:monolith": "npm run build:monolith && npm run package:monolith",
     "test:backend": "npm --prefix backend test",
     "build:win": "npm --prefix desktop-electron run build:win"
   }

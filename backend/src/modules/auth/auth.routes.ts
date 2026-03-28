@@ -5,6 +5,7 @@ import { authenticate, type AuthenticatedRequest } from "../../middleware/auth.j
 import { writeAuditLog } from "../../services/audit.service.js";
 import { getPermissionsForRole } from "../../services/permission.service.js";
 import { validateBody } from "../../middleware/validate.js";
+import { assertLoginAttemptAllowed, clearLoginFailures, recordLoginFailure } from "../../middleware/loginRateLimit.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { AppError } from "../../utils/appError.js";
 import { signToken } from "../../utils/jwt.js";
@@ -33,16 +34,25 @@ router.post(
   validateBody(loginSchema),
   asyncHandler(async (req, res) => {
     const { username, password } = req.body;
+    const attempt = assertLoginAttemptAllowed(req.headers["x-forwarded-for"] ?? req.socket.remoteAddress, username);
+    if (!attempt.allowed) {
+      res.setHeader("Retry-After", String(attempt.retryAfterSeconds));
+      throw new AppError("Too many login attempts. Try again shortly.", 429, "TOO_MANY_LOGIN_ATTEMPTS");
+    }
 
     const user = await prisma.user.findUnique({ where: { username } });
     if (!user || !user.active) {
+      recordLoginFailure(attempt.key);
       throw new AppError("Invalid credentials", 401);
     }
 
     const ok = await verifyPassword(password, user.passwordHash);
     if (!ok) {
+      recordLoginFailure(attempt.key);
       throw new AppError("Invalid credentials", 401);
     }
+
+    clearLoginFailures(attempt.key);
 
     const token = signToken({
       userId: user.id,

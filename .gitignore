@@ -16,8 +16,11 @@ backend/node_modules/
 frontend/node_modules/
 desktop-electron/node_modules/
 backend/dist/
+backend/public/
+!backend/public/.gitkeep
 frontend/dist/
 dist/
+app/dist/
 backend/.env
 frontend/.env
 backend/prisma/*.db

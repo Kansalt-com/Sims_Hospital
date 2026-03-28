@@ -1,26 +1,22 @@
-name: HMS CI And Deploy
+name: Build And Deploy Azure App Service
 
 on:
-  pull_request:
-    branches:
-      - main
-      - master
   push:
     branches:
       - main
-      - master
+  workflow_dispatch:
 
 concurrency:
-  group: hms-${{ github.workflow }}-${{ github.ref }}
+  group: azure-appservice-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  ci:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -29,11 +25,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: |
-            frontend/package-lock.json
             backend/package-lock.json
+            frontend/package-lock.json
 
       - name: Install frontend dependencies
         working-directory: frontend
@@ -47,45 +43,40 @@ jobs:
         working-directory: backend
         run: npm run prisma:generate
 
-      - name: Build frontend for /hms
+      - name: Build frontend into backend public
         working-directory: frontend
-        env:
-          VITE_APP_BASE_PATH: /hms/
-          VITE_API_BASE_URL: https://www.kansalt.com/hms/api
-          VITE_UPLOAD_BASE_URL: https://www.kansalt.com/hms
-        run: npm run build
+        run: npm run build:backend-public
 
       - name: Build backend
         working-directory: backend
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          CORS_ORIGIN: ${{ secrets.CORS_ORIGIN }}
         run: npm run build
 
-      - name: Run backend tests
+      - name: Prune backend dev dependencies
         working-directory: backend
-        run: npm test --if-present
+        run: npm prune --omit=dev
 
-  dispatch-deploy:
-    if: github.event_name == 'push'
-    needs: ci
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
+      - name: Package monolith artifact
+        run: npm run package:monolith
 
-    steps:
-      - name: Trigger Kansalt infra deployment
-        env:
-          DISPATCH_TOKEN: ${{ secrets.KANSALT_INFRA_DISPATCH_TOKEN }}
-        run: |
-          set -euo pipefail
-          curl --fail --show-error --silent \
-            -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer ${DISPATCH_TOKEN}" \
-            https://api.github.com/repos/Kansalt-com/Kansalt/dispatches \
-            -d @- <<EOF
-          {
-            "event_type": "deploy-hms",
-            "client_payload": {
-              "hms_ref": "${GITHUB_REF_NAME}",
-              "hms_sha": "${GITHUB_SHA}"
-            }
-          }
-          EOF
+      - name: Archive deployment package
+        working-directory: app/dist
+        run: zip -r ../sims-monolith-${{ github.sha }}.zip .
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sims-monolith-${{ github.sha }}
+          path: app/sims-monolith-${{ github.sha }}.zip
+          retention-days: 14
+
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: app/sims-monolith-${{ github.sha }}.zip

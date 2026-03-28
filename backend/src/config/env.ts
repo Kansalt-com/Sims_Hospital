@@ -1,4 +1,5 @@
-﻿import path from "node:path";
+﻿import fs from "node:fs";
+import path from "node:path";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -22,6 +23,14 @@ const parseBoolean = (value: string | undefined, fallback: boolean) => {
 };
 
 const defaultUploadDir = path.resolve(process.cwd(), "uploads");
+const defaultFrontendDistDir = (() => {
+  const candidates = [
+    path.resolve(process.cwd(), "public"),
+    path.resolve(process.cwd(), "backend", "public"),
+  ];
+
+  return candidates.find((candidate) => fs.existsSync(path.join(candidate, "index.html")));
+})();
 
 const databaseUrl =
   process.env.DATABASE_URL ??
@@ -51,7 +60,7 @@ export const env = {
   uploadDirPath: process.env.UPLOAD_DIR_PATH ? resolvePathMaybe(process.env.UPLOAD_DIR_PATH) : defaultUploadDir,
   uploadUrlPath: process.env.UPLOAD_URL_PATH ?? "uploads",
   corsOrigin,
-  frontendDistDir: process.env.FRONTEND_DIST_DIR ? resolvePathMaybe(process.env.FRONTEND_DIST_DIR) : undefined,
+  frontendDistDir: process.env.FRONTEND_DIST_DIR ? resolvePathMaybe(process.env.FRONTEND_DIST_DIR) : defaultFrontendDistDir,
   migrationsDir: process.env.MIGRATIONS_DIR ? resolvePathMaybe(process.env.MIGRATIONS_DIR) : path.resolve(process.cwd(), "prisma", "migrations"),
   logDir: process.env.LOG_DIR ? resolvePathMaybe(process.env.LOG_DIR) : path.resolve(process.cwd(), "logs"),
   enableFileLogging: parseBoolean(process.env.ENABLE_FILE_LOGGING, true),

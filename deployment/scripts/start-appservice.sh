@@ -6,6 +6,7 @@ PERSIST_ROOT="/home/site"
 STARTUP_LOG="${PERSIST_ROOT}/logs/startup.log"
 PRISMA_SCHEMA_SYNC_MODE="${PRISMA_SCHEMA_SYNC_MODE:-none}"
 BACKEND_ROOT="${APP_ROOT}/backend"
+PUBLIC_ROOT="${BACKEND_ROOT}/public"
 
 mkdir -p "${PERSIST_ROOT}/uploads" "${PERSIST_ROOT}/logs"
 
@@ -14,11 +15,6 @@ log() {
 }
 
 log "startup.begin"
-
-if [ ! -d "${APP_ROOT}/frontend-dist" ] && [ -d "${APP_ROOT}/frontend/dist" ]; then
-  cp -R "${APP_ROOT}/frontend/dist" "${APP_ROOT}/frontend-dist"
-  log "startup.seeded_frontend_dist"
-fi
 
 if [ -d "${BACKEND_ROOT}/uploads" ] && [ -z "$(find "${PERSIST_ROOT}/uploads" -mindepth 1 -print -quit 2>/dev/null)" ]; then
   cp -R "${BACKEND_ROOT}/uploads/." "${PERSIST_ROOT}/uploads/" 2>/dev/null || true
@@ -32,6 +28,11 @@ fi
 
 if [ ! -f "${BACKEND_ROOT}/dist/src/server.js" ]; then
   log "startup.missing_backend_dist"
+  exit 1
+fi
+
+if [ ! -f "${PUBLIC_ROOT}/index.html" ]; then
+  log "startup.missing_frontend_public"
   exit 1
 fi
 
@@ -49,6 +50,6 @@ elif [ "${PRISMA_SCHEMA_SYNC_MODE}" = "migrate" ]; then
   )
 fi
 
-cd "${BACKEND_ROOT}"
+cd "${APP_ROOT}"
 log "startup.launching_server"
-exec node dist/src/server.js
+exec node backend/dist/src/server.js
