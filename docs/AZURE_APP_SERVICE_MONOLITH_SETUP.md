@@ -67,11 +67,17 @@ Add these repository secrets:
 
 ```text
 AZURE_WEBAPP_NAME
-AZURE_WEBAPP_PUBLISH_PROFILE
+AZURE_CREDENTIALS
 JWT_SECRET
 DATABASE_URL
 DIRECT_URL
 CORS_ORIGIN
+```
+
+`AZURE_CREDENTIALS` should contain the full JSON output from:
+
+```text
+az ad sp create-for-rbac --sdk-auth ...
 ```
 
 Optional if the backend will use Supabase APIs directly:

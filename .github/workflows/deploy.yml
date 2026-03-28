@@ -74,9 +74,15 @@ jobs:
           path: app/sims-monolith-${{ github.sha }}.zip
           retention-days: 14
 
-      - name: Deploy to Azure App Service
-        uses: azure/webapps-deploy@v3
+      - name: Azure login
+        uses: azure/login@v2
         with:
-          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: app/sims-monolith-${{ github.sha }}.zip
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure App Service
+        run: |
+          az webapp deploy \
+            --resource-group sims-prod-rg \
+            --name ${{ secrets.AZURE_WEBAPP_NAME }} \
+            --src-path app/sims-monolith-${{ github.sha }}.zip \
+            --type zip
