@@ -6,7 +6,7 @@ import { patientApi } from "../../api/services";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
-import { Loader } from "../../components/ui/Loader";
+import { GlobalLoader } from "../../components/ui/GlobalLoader";
 import type { Patient, Visit } from "../../types";
 import { formatCurrency, formatDateTime, formatVisitDate } from "../../utils/format";
 
@@ -69,7 +69,7 @@ export const PatientProfilePage = () => {
   }, [patient]);
 
   if (loading) {
-    return <Loader />;
+    return <GlobalLoader variant="fullPage" text="Loading patient record..." />;
   }
 
   if (!patient) {

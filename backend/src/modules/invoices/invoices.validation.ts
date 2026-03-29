@@ -52,6 +52,9 @@ export const listQuerySchema = z.object({
   date: z.string().optional(),
   paymentStatus: z.enum(PAYMENT_STATUSES).optional(),
   invoiceType: z.enum(INVOICE_TYPES).optional(),
+  compact: z
+    .union([z.literal("true"), z.literal("false")])
+    .optional(),
 });
 
 export const idParamsSchema = z.object({

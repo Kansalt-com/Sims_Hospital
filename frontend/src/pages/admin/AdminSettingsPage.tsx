@@ -7,7 +7,7 @@ import { BrandLogo } from "../../components/ui/BrandLogo";
 import { Card } from "../../components/ui/Card";
 import { FormSection } from "../../components/ui/FormSection";
 import { Input } from "../../components/ui/Input";
-import { Loader } from "../../components/ui/Loader";
+import { SkeletonLoader } from "../../components/ui/SkeletonLoader";
 import { Textarea } from "../../components/ui/Textarea";
 import { useBranding } from "../../context/BrandingContext";
 import type { HospitalSettings } from "../../types";
@@ -168,7 +168,12 @@ export const AdminSettingsPage = () => {
   );
 
   if (loading) {
-    return <Loader />;
+    return (
+      <div className="space-y-6">
+        <SkeletonLoader variant="panel" />
+        <SkeletonLoader variant="panel" />
+      </div>
+    );
   }
 
   return (
@@ -202,7 +207,7 @@ export const AdminSettingsPage = () => {
           </FormSection>
 
           <div className="flex flex-wrap gap-3">
-            <Button type="submit" disabled={saving}>{saving ? "Saving Settings..." : "Save Settings"}</Button>
+            <Button type="submit" loading={saving}>Save Settings</Button>
           </div>
         </form>
       </Card>
@@ -236,8 +241,8 @@ export const AdminSettingsPage = () => {
               </div>
               <div className="flex flex-wrap gap-3">
                 <input ref={logoInputRef} type="file" accept=".png,.jpg,.jpeg,.svg,image/png,image/jpeg,image/svg+xml" className="hidden" onChange={uploadLogo} />
-                <Button variant="secondary" onClick={() => logoInputRef.current?.click()} disabled={uploading}>
-                  {uploading ? "Uploading..." : "Upload Hospital Logo"}
+                <Button variant="secondary" onClick={() => logoInputRef.current?.click()} loading={uploading}>
+                  Upload Hospital Logo
                 </Button>
               </div>
               <p className="text-xs text-slate-500">{hospitalLogoStatus}</p>

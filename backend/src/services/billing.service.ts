@@ -1,9 +1,9 @@
 import dayjs from "dayjs";
 import type { Prisma } from "@prisma/client";
+import { clearReportingCache } from "./cache.service.js";
 import type { PaymentStatusValue } from "../types/domain.js";
 import { AppError } from "../utils/appError.js";
 import { roundMoney } from "../utils/id.js";
-import { clearCache } from "../utils/memoryCache.js";
 
 type InvoiceItemInput = {
   category: "CONSULTATION" | "LAB" | "PROCEDURE" | "MEDICINE" | "MISC";
@@ -142,7 +142,6 @@ export const createPaymentRecords = async (
     ),
   );
 
-  clearCache("dashboard:");
-  clearCache("reports:");
+  clearReportingCache();
   return created;
 };

@@ -2,11 +2,13 @@ import type { Prisma } from "@prisma/client";
 import dayjs from "dayjs";
 import { prisma } from "../../db/prisma.js";
 import type { AuthenticatedRequest } from "../../middleware/auth.js";
+import { clearPatientCache, clearPrescriptionCache, clearReportingCache } from "../../services/cache.service.js";
 import { writeAuditLog } from "../../services/audit.service.js";
 import { assertBedAvailability, setBedOccupancy } from "../../services/beds.service.js";
 import { AppError } from "../../utils/appError.js";
 import { generateMrn } from "../../utils/id.js";
 import { parsePage } from "../../utils/pagination.js";
+import { buildTextSearchVariants } from "../../utils/search.js";
 import type {
   CreateVisitInput,
   TransferToIpdInput,
@@ -16,8 +18,10 @@ import type {
 } from "./visits.validation.js";
 
 export const listVisits = async (query: VisitListQuery, requestUser?: AuthenticatedRequest["user"]) => {
-  const { doctorId, date, status, type, page, pageSize, q } = query;
+  const { doctorId, date, status, type, page, pageSize, q, compact } = query;
   const { skip, take, page: safePage, pageSize: safeSize } = parsePage(page, pageSize);
+  const useCompactPayload = compact === "true";
+  const { query: searchQuery, digits, hasDigits, hasText } = buildTextSearchVariants(q ?? "");
 
   const selectedDay = date ? dayjs(date) : null;
   const dayStart = selectedDay?.startOf("day").toDate();
@@ -31,11 +35,11 @@ export const listVisits = async (query: VisitListQuery, requestUser?: Authentica
     status: status ?? undefined,
     type: type ?? undefined,
     scheduledAt: dayStart && dayEnd ? { gte: dayStart, lte: dayEnd } : undefined,
-    OR: q
+    OR: searchQuery
       ? [
-          { patient: { name: { contains: q } } },
-          { patient: { phone: { contains: q } } },
-          { patient: { mrn: { contains: q } } },
+          ...(hasText ? [{ patient: { name: { contains: searchQuery, mode: "insensitive" as const } } }] : []),
+          ...(hasDigits ? [{ patient: { phone: { startsWith: digits } } }] : []),
+          { patient: { mrn: { contains: searchQuery, mode: "insensitive" as const } } },
         ]
       : undefined,
   };
@@ -44,95 +48,142 @@ export const listVisits = async (query: VisitListQuery, requestUser?: Authentica
     prisma.visit.count({ where }),
     prisma.visit.findMany({
       where,
-      select: {
-        id: true,
-        patientId: true,
-        doctorId: true,
-        type: true,
-        status: true,
-        consultationFee: true,
-        reason: true,
-        scheduledAt: true,
-        completedAt: true,
-        createdAt: true,
-        updatedAt: true,
-        patient: {
-          select: {
+      select: useCompactPayload
+        ? {
             id: true,
-            mrn: true,
-            name: true,
-            age: true,
-            dob: true,
-            gender: true,
-            phone: true,
-            address: true,
-            idProof: true,
-            active: true,
+            patientId: true,
+            doctorId: true,
+            type: true,
+            status: true,
+            consultationFee: true,
+            reason: true,
+            scheduledAt: true,
+            completedAt: true,
             createdAt: true,
             updatedAt: true,
-          },
-        },
-        doctor: {
-          select: {
+            patient: {
+              select: {
+                id: true,
+                mrn: true,
+                name: true,
+                age: true,
+                dob: true,
+                gender: true,
+                phone: true,
+                address: true,
+                idProof: true,
+                active: true,
+                createdAt: true,
+                updatedAt: true,
+              },
+            },
+            doctor: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            invoice: {
+              select: {
+                id: true,
+                invoiceNo: true,
+                total: true,
+                paidAmount: true,
+                dueAmount: true,
+                paymentStatus: true,
+                invoiceType: true,
+              },
+            },
+          }
+        : {
             id: true,
-            name: true,
-            doctorProfile: { select: { qualification: true, specialization: true } },
-          },
-        },
-        invoice: {
-          select: {
-            id: true,
-            invoiceNo: true,
-            total: true,
-            paidAmount: true,
-            dueAmount: true,
-            paymentStatus: true,
-            invoiceType: true,
-          },
-        },
-        prescription: {
-          select: {
-            id: true,
-            visitId: true,
-            createdAt: true,
-            printedAt: true,
-            templateType: true,
-          },
-        },
-        ipdAdmission: {
-          select: {
-            id: true,
-            visitId: true,
             patientId: true,
-            attendingDoctorId: true,
-            roomId: true,
-            bedId: true,
+            doctorId: true,
+            type: true,
             status: true,
-            admittedAt: true,
-            dischargedAt: true,
-            ward: true,
-            room: true,
-            bed: true,
-            diagnosis: true,
+            consultationFee: true,
             reason: true,
+            scheduledAt: true,
+            completedAt: true,
             createdAt: true,
-            roomAllocation: true,
-            bedAllocation: true,
+            updatedAt: true,
+            patient: {
+              select: {
+                id: true,
+                mrn: true,
+                name: true,
+                age: true,
+                dob: true,
+                gender: true,
+                phone: true,
+                address: true,
+                idProof: true,
+                active: true,
+                createdAt: true,
+                updatedAt: true,
+              },
+            },
+            doctor: {
+              select: {
+                id: true,
+                name: true,
+                doctorProfile: { select: { qualification: true, specialization: true } },
+              },
+            },
+            invoice: {
+              select: {
+                id: true,
+                invoiceNo: true,
+                total: true,
+                paidAmount: true,
+                dueAmount: true,
+                paymentStatus: true,
+                invoiceType: true,
+              },
+            },
+            prescription: {
+              select: {
+                id: true,
+                visitId: true,
+                createdAt: true,
+                printedAt: true,
+                templateType: true,
+              },
+            },
+            ipdAdmission: {
+              select: {
+                id: true,
+                visitId: true,
+                patientId: true,
+                attendingDoctorId: true,
+                roomId: true,
+                bedId: true,
+                status: true,
+                admittedAt: true,
+                dischargedAt: true,
+                ward: true,
+                room: true,
+                bed: true,
+                diagnosis: true,
+                reason: true,
+                createdAt: true,
+                roomAllocation: true,
+                bedAllocation: true,
+              },
+            },
+            opdToIpdTransfer: {
+              select: {
+                id: true,
+                opdVisitId: true,
+                ipdAdmissionId: true,
+                patientId: true,
+                transferredById: true,
+                notes: true,
+                createdAt: true,
+              },
+            },
           },
-        },
-        opdToIpdTransfer: {
-          select: {
-            id: true,
-            opdVisitId: true,
-            ipdAdmissionId: true,
-            patientId: true,
-            transferredById: true,
-            notes: true,
-            createdAt: true,
-          },
-        },
-      },
-      orderBy: [{ status: "asc" }, { scheduledAt: "asc" }],
+      orderBy: useCompactPayload ? [{ createdAt: "desc" }] : [{ status: "asc" }, { scheduledAt: "asc" }],
       skip,
       take,
     }),
@@ -255,6 +306,8 @@ export const createVisit = async (payload: CreateVisitInput, req: AuthenticatedR
       client: tx,
     });
 
+    clearPatientCache();
+    clearReportingCache();
     return createdVisit;
   });
 };
@@ -292,6 +345,7 @@ export const updateVisitStatus = async (
     request: req,
   });
 
+  clearReportingCache();
   return updated;
 };
 
@@ -329,6 +383,7 @@ export const addVisitNote = async (visitId: number, payload: VisitNoteInput, req
     request: req,
   });
 
+  clearReportingCache();
   return note;
 };
 
@@ -389,6 +444,7 @@ export const saveVisitPrescription = async (visitId: number, payload: VisitPresc
     request: req,
   });
 
+  clearPrescriptionCache();
   return prescription;
 };
 
@@ -422,6 +478,7 @@ export const markVisitPrescriptionPrinted = async (visitId: number, req: Authent
     request: req,
   });
 
+  clearPrescriptionCache();
   return updated;
 };
 
@@ -536,6 +593,7 @@ export const transferOpdVisitToIpd = async (visitId: number, payload: TransferTo
       client: tx,
     });
 
+    clearReportingCache();
     return admission;
   });
 };

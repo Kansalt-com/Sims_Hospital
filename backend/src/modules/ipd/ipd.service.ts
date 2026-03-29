@@ -2,10 +2,12 @@ import type { Prisma } from "@prisma/client";
 import dayjs from "dayjs";
 import { prisma } from "../../db/prisma.js";
 import type { AuthenticatedRequest } from "../../middleware/auth.js";
+import { clearReportingCache } from "../../services/cache.service.js";
 import { writeAuditLog } from "../../services/audit.service.js";
 import { assertBedAvailability, setBedOccupancy } from "../../services/beds.service.js";
 import { AppError } from "../../utils/appError.js";
 import { parsePage } from "../../utils/pagination.js";
+import { buildTextSearchVariants } from "../../utils/search.js";
 import type {
   CreateAdmissionInput,
   DischargeAdmissionInput,
@@ -16,6 +18,7 @@ import type {
 export const listAdmissions = async (query: IpdListQuery, requestUser?: AuthenticatedRequest["user"]) => {
   const { q, status, doctorId, date, page, pageSize } = query;
   const { skip, take, page: safePage, pageSize: safeSize } = parsePage(page, pageSize);
+  const { query: searchQuery, digits, hasDigits, hasText } = buildTextSearchVariants(q ?? "");
 
   const selectedDay = date ? dayjs(date) : null;
   const dayStart = selectedDay?.startOf("day").toDate();
@@ -25,14 +28,14 @@ export const listAdmissions = async (query: IpdListQuery, requestUser?: Authenti
     status: status ?? undefined,
     attendingDoctorId: requestUser?.role === "DOCTOR" ? requestUser.id : doctorId ? Number(doctorId) : undefined,
     admittedAt: dayStart && dayEnd ? { gte: dayStart, lte: dayEnd } : undefined,
-    OR: q
+    OR: searchQuery
       ? [
-          { patient: { name: { contains: q } } },
-          { patient: { phone: { contains: q } } },
-          { patient: { mrn: { contains: q } } },
-          { ward: { contains: q } },
-          { room: { contains: q } },
-          { bed: { contains: q } },
+          ...(hasText ? [{ patient: { name: { contains: searchQuery, mode: "insensitive" as const } } }] : []),
+          ...(hasDigits ? [{ patient: { phone: { startsWith: digits } } }] : []),
+          { patient: { mrn: { contains: searchQuery, mode: "insensitive" as const } } },
+          { ward: { contains: searchQuery, mode: "insensitive" as const } },
+          { room: { contains: searchQuery, mode: "insensitive" as const } },
+          { bed: { contains: searchQuery, mode: "insensitive" as const } },
         ]
       : undefined,
   };
@@ -188,6 +191,7 @@ export const createAdmission = async (payload: CreateAdmissionInput, req: Authen
       client: tx,
     });
 
+    clearReportingCache();
     return admission;
   });
 };
@@ -264,6 +268,7 @@ export const updateAdmission = async (admissionId: number, payload: UpdateAdmiss
       client: tx,
     });
 
+    clearReportingCache();
     return row;
   });
 };
@@ -331,6 +336,7 @@ export const dischargeAdmission = async (admissionId: number, payload: Discharge
       client: tx,
     });
 
+    clearReportingCache();
     return row;
   });
 };

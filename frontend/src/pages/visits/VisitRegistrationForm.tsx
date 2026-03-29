@@ -126,12 +126,10 @@ export const VisitRegistrationForm = ({
         ) : null}
 
         <div className="md:col-span-3">
-          <Button type="submit" disabled={saving}>
-            {saving
-              ? "Creating..."
-              : form.visitPurpose === "LAB_ONLY"
-                ? "Print Bill"
-                : "Create Visit & Print Bill"}
+          <Button type="submit" loading={saving}>
+            {form.visitPurpose === "LAB_ONLY"
+              ? "Print Bill"
+              : "Create Visit & Print Bill"}
           </Button>
         </div>
       </form>

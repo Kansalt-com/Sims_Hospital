@@ -3,10 +3,13 @@ import { z } from "zod";
 import { prisma } from "../../db/prisma.js";
 import { authenticate, authorize, type AuthenticatedRequest } from "../../middleware/auth.js";
 import { validateBody, validateParams, validateQuery } from "../../middleware/validate.js";
+import { CACHE_PREFIXES, clearUserCache } from "../../services/cache.service.js";
 import { writeAuditLog } from "../../services/audit.service.js";
 import { USER_ROLES } from "../../types/domain.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { AppError } from "../../utils/appError.js";
+import { getOrSetCache } from "../../utils/memoryCache.js";
+import { parsePage } from "../../utils/pagination.js";
 import { hashPassword } from "../../utils/password.js";
 
 const router = Router();
@@ -35,6 +38,8 @@ const idParamsSchema = z.object({
 const listQuerySchema = z.object({
   role: z.enum(USER_ROLES).optional(),
   active: z.enum(["true", "false"]).optional(),
+  page: z.string().optional(),
+  pageSize: z.string().optional(),
 });
 
 router.use(authenticate, authorize("ADMIN"));
@@ -43,27 +48,50 @@ router.get(
   "/",
   validateQuery(listQuerySchema),
   asyncHandler(async (req, res) => {
-    const { role, active } = req.query as z.infer<typeof listQuerySchema>;
+    const { role, active, page, pageSize } = req.query as z.infer<typeof listQuerySchema>;
+    const { skip, take, page: safePage, pageSize: safeSize } = parsePage(page, pageSize);
+    const where = {
+      role,
+      active: active === undefined ? undefined : active === "true",
+    };
 
-    const users = await prisma.user.findMany({
-      where: {
-        role,
-        active: active === undefined ? undefined : active === "true",
-      },
-      select: {
-        id: true,
-        name: true,
-        username: true,
-        role: true,
-        active: true,
-        forcePasswordChange: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const payload = await getOrSetCache(
+      `${CACHE_PREFIXES.users}list:${role ?? "all"}:${active ?? "all"}:${safePage}:${safeSize}`,
+      60_000,
+      async () => {
+        const [total, users] = await Promise.all([
+          prisma.user.count({ where }),
+          prisma.user.findMany({
+            where,
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              role: true,
+              active: true,
+              forcePasswordChange: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+            orderBy: { createdAt: "desc" },
+            skip,
+            take,
+          }),
+        ]);
 
-    res.json({ data: users });
+        return {
+          data: users,
+          pagination: {
+            page: safePage,
+            pageSize: safeSize,
+            total,
+            totalPages: Math.ceil(total / safeSize),
+          },
+        };
+      },
+    );
+
+    res.json(payload);
   }),
 );
 
@@ -103,6 +131,7 @@ router.post(
       request: req,
     });
 
+    clearUserCache();
     res.status(201).json({ data: user });
   }),
 );
@@ -144,6 +173,7 @@ router.patch(
       request: req,
     });
 
+    clearUserCache();
     res.json({ data: user });
   }),
 );
@@ -176,6 +206,7 @@ router.post(
       request: req,
     });
 
+    clearUserCache();
     res.json({ message: "Password reset successful. User must change password on next login." });
   }),
 );
@@ -246,6 +277,7 @@ router.delete(
       request: req,
     });
 
+    clearUserCache();
     res.json({ message: "User deleted successfully." });
   }),
 );

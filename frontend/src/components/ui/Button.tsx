@@ -1,13 +1,24 @@
 import clsx from "clsx";
+import { GlobalLoader } from "./GlobalLoader";
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "secondary" | "ghost" | "danger";
+  loading?: boolean;
 };
 
-export const Button = ({ variant = "primary", className, type = "button", ...props }: ButtonProps) => {
+export const Button = ({
+  variant = "primary",
+  className,
+  type = "button",
+  loading = false,
+  disabled,
+  children,
+  ...props
+}: ButtonProps) => {
   return (
     <button
       type={type}
+      aria-busy={loading || undefined}
       className={clsx(
         "inline-flex min-h-[38px] cursor-pointer items-center justify-center gap-2 rounded-[6px] px-4 py-2 text-sm font-semibold transition-all duration-200 hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0",
         {
@@ -18,7 +29,11 @@ export const Button = ({ variant = "primary", className, type = "button", ...pro
         },
         className,
       )}
+      disabled={disabled || loading}
       {...props}
-    />
+    >
+      {loading ? <GlobalLoader variant="inline" delayMs={120} minVisibleMs={180} /> : null}
+      <span className={clsx(loading && "opacity-90")}>{children}</span>
+    </button>
   );
 };

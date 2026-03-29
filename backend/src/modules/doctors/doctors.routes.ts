@@ -8,9 +8,13 @@ import { env } from "../../config/env.js";
 import { prisma } from "../../db/prisma.js";
 import { authenticate, authorize } from "../../middleware/auth.js";
 import { validateBody, validateParams, validateQuery } from "../../middleware/validate.js";
+import { CACHE_PREFIXES, clearDoctorCache } from "../../services/cache.service.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { AppError } from "../../utils/appError.js";
+import { getOrSetCache } from "../../utils/memoryCache.js";
+import { parsePage } from "../../utils/pagination.js";
 import { hashPassword } from "../../utils/password.js";
+import { normalizeSearchTerm } from "../../utils/search.js";
 
 const router = Router();
 
@@ -72,6 +76,8 @@ const idParamsSchema = z.object({
 const listQuerySchema = z.object({
   active: z.enum(["true", "false"]).optional(),
   q: z.string().optional(),
+  page: z.string().optional(),
+  pageSize: z.string().optional(),
 });
 
 router.use(authenticate);
@@ -80,28 +86,68 @@ router.get(
   "/",
   validateQuery(listQuerySchema),
   asyncHandler(async (req, res) => {
-    const { active, q } = req.query as z.infer<typeof listQuerySchema>;
+    const { active, q, page, pageSize } = req.query as z.infer<typeof listQuerySchema>;
+    const trimmedQuery = normalizeSearchTerm(q);
+    const { skip, take, page: safePage, pageSize: safeSize } = parsePage(page, pageSize);
+    const where = {
+      role: "DOCTOR" as const,
+      active: active === undefined ? undefined : active === "true",
+      OR: trimmedQuery
+        ? [
+            { name: { contains: trimmedQuery, mode: "insensitive" as const } },
+            { username: { contains: trimmedQuery, mode: "insensitive" as const } },
+            { doctorProfile: { specialization: { contains: trimmedQuery, mode: "insensitive" as const } } },
+            { doctorProfile: { qualification: { contains: trimmedQuery, mode: "insensitive" as const } } },
+          ]
+        : undefined,
+    };
 
-    const rows = await prisma.user.findMany({
-      where: {
-        role: "DOCTOR",
-        active: active === undefined ? undefined : active === "true",
-        OR: q
-          ? [
-              { name: { contains: q } },
-              { username: { contains: q } },
-              { doctorProfile: { specialization: { contains: q } } },
-              { doctorProfile: { qualification: { contains: q } } },
-            ]
-          : undefined,
-      },
-      include: {
-        doctorProfile: true,
-      },
-      orderBy: { name: "asc" },
-    });
+    const payload = await getOrSetCache(
+      `${CACHE_PREFIXES.doctors}list:${trimmedQuery || "all"}:${safePage}:${safeSize}:${active ?? "all"}`,
+      5 * 60_000,
+      async () => {
+        const [total, rows] = await Promise.all([
+          prisma.user.count({ where }),
+          prisma.user.findMany({
+            where,
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              active: true,
+              role: true,
+              updatedAt: true,
+              doctorProfile: {
+                select: {
+                  qualification: true,
+                  specialization: true,
+                  experienceYears: true,
+                  registrationNumber: true,
+                  phone: true,
+                  email: true,
+                  signaturePath: true,
+                },
+              },
+            },
+            orderBy: { name: "asc" },
+            skip,
+            take,
+          }),
+        ]);
 
-    res.json({ data: rows });
+        return {
+          data: rows,
+          pagination: {
+            page: safePage,
+            pageSize: safeSize,
+            total,
+            totalPages: Math.ceil(total / safeSize),
+          },
+        };
+      },
+    );
+
+    res.json(payload);
   }),
 );
 
@@ -171,6 +217,7 @@ router.post(
       });
     });
 
+    clearDoctorCache();
     res.status(201).json({ data: created });
   }),
 );
@@ -241,6 +288,7 @@ router.patch(
       return tx.user.findUnique({ where: { id: userId }, include: { doctorProfile: true } });
     });
 
+    clearDoctorCache();
     res.json({ data: updated });
   }),
 );
@@ -290,6 +338,7 @@ router.post(
       include: { doctorProfile: true },
     });
 
+    clearDoctorCache();
     res.json({ data: updated });
   }),
 );

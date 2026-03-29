@@ -4,12 +4,13 @@ import { ArrowUpRight, BedDouble, BriefcaseMedical, CalendarRange, CircleDollarS
 import { reportsApi, visitApi } from "../api/services";
 import { Card } from "../components/ui/Card";
 import { EmptyState } from "../components/ui/EmptyState";
-import { Loader } from "../components/ui/Loader";
 import { Button } from "../components/ui/Button";
+import { SkeletonLoader } from "../components/ui/SkeletonLoader";
 import { useAuth } from "../context/AuthContext";
 import type { DashboardSnapshot, Visit } from "../types";
 import { formatCurrency, formatDateTime, formatVisitDate } from "../utils/format";
 import { getErrorMessage } from "../api/client";
+import { readCachedPageData, writeCachedPageData } from "../utils/pageCache";
 
 const widgetCards = [
   { key: "todayOpdPatients", label: "Today's OPD Patients", icon: <BriefcaseMedical size={18} />, to: "/visits" },
@@ -21,14 +22,18 @@ const widgetCards = [
 ] as const;
 
 export const DashboardPage = () => {
+  const cacheKey = "page-cache:dashboard";
+  const cached = readCachedPageData<{ snapshot: DashboardSnapshot | null; visitRows: Visit[] }>(cacheKey);
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
-  const [visitRows, setVisitRows] = useState<Visit[]>([]);
+  const [loading, setLoading] = useState(!cached);
+  const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(cached?.snapshot ?? null);
+  const [visitRows, setVisitRows] = useState<Visit[]>(cached?.visitRows ?? []);
   const [pageError, setPageError] = useState("");
 
   const load = async () => {
-    setLoading(true);
+    if (!snapshot) {
+      setLoading(true);
+    }
     setPageError("");
     try {
       const today = new Date().toISOString().slice(0, 10);
@@ -39,6 +44,14 @@ export const DashboardPage = () => {
 
       setSnapshot(dashboardRes.data.data);
       setVisitRows(visitsRes.data.data);
+      writeCachedPageData(
+        cacheKey,
+        {
+          snapshot: dashboardRes.data.data,
+          visitRows: visitsRes.data.data,
+        },
+        60_000,
+      );
     } catch (error) {
       setPageError(getErrorMessage(error));
     } finally {
@@ -59,7 +72,16 @@ export const DashboardPage = () => {
   }, [snapshot]);
 
   if (loading) {
-    return <Loader />;
+    return (
+      <div className="space-y-6">
+        <SkeletonLoader variant="panel" />
+        <SkeletonLoader variant="cards" rows={6} />
+        <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+          <SkeletonLoader variant="panel" />
+          <SkeletonLoader variant="panel" />
+        </div>
+      </div>
+    );
   }
 
   if (pageError) {

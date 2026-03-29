@@ -18,8 +18,8 @@ import { ipdRouter } from "./modules/ipd/ipd.routes.js";
 import { prescriptionsRouter } from "./modules/prescriptions/prescriptions.routes.js";
 import { reportsRouter } from "./modules/reports/reports.routes.js";
 import { roomsRouter } from "./modules/rooms/rooms.routes.js";
-import { logInfo, requestLogContext } from "./utils/logger.js";
-import { getMetricsSnapshot, recordRequestMetric } from "./utils/metrics.js";
+import { logInfo, logSlowOperation, requestLogContext } from "./utils/logger.js";
+import { getMetricsSnapshot, recordRequestMetric, recordSlowRequest } from "./utils/metrics.js";
 
 const app = express();
 
@@ -48,11 +48,19 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const durationMs = Date.now() - startedAt;
     recordRequestMetric(durationMs);
-    logInfo("request.completed", {
+    const context = {
       ...requestLogContext(req),
       statusCode: res.statusCode,
       durationMs,
-    });
+    };
+
+    if (durationMs >= env.slowRequestMs) {
+      recordSlowRequest(req.originalUrl, req.method, res.statusCode, durationMs);
+      logSlowOperation("request.completed.slow", durationMs, context);
+      return;
+    }
+
+    logInfo("request.completed", context);
   });
 
   next();

@@ -57,7 +57,7 @@ export const PaymentModal = ({ invoice, payment, saving, onClose, onChange, onSu
 
         <div className="mt-6 flex justify-end gap-3">
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button onClick={onSubmit} disabled={saving}>{saving ? "Saving..." : "Collect Payment"}</Button>
+          <Button onClick={onSubmit} loading={saving}>Collect Payment</Button>
         </div>
       </div>
     </div>

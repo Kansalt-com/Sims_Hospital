@@ -81,6 +81,16 @@ docker build -t sims-hospital .
 docker run -p 4000:4000 -e JWT_SECRET=replace-me sims-hospital
 ```
 
+## Azure App Service Startup
+
+For the steady-state Azure App Service deployment, use this startup command:
+
+```text
+bash -c "mkdir -p /home/site/uploads /home/site/logs; cd /home/site/wwwroot; exec node backend/dist/src/server.js"
+```
+
+Use `bash start-appservice.sh` only when you intentionally need the scripted startup path for schema sync or bootstrap tasks.
+
 ## First Admin Bootstrap
 
 Use environment variables on first startup for a fresh empty database:

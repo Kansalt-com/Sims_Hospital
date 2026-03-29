@@ -1,11 +1,12 @@
-﻿import { Router } from "express";
+import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../db/prisma.js";
 import { authenticate, type AuthenticatedRequest } from "../../middleware/auth.js";
+import { assertLoginAttemptAllowed, clearLoginFailures, recordLoginFailure } from "../../middleware/loginRateLimit.js";
+import { validateBody } from "../../middleware/validate.js";
+import { clearUserCache } from "../../services/cache.service.js";
 import { writeAuditLog } from "../../services/audit.service.js";
 import { getPermissionsForRole } from "../../services/permission.service.js";
-import { validateBody } from "../../middleware/validate.js";
-import { assertLoginAttemptAllowed, clearLoginFailures, recordLoginFailure } from "../../middleware/loginRateLimit.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { AppError } from "../../utils/appError.js";
 import { signToken } from "../../utils/jwt.js";
@@ -40,7 +41,19 @@ router.post(
       throw new AppError("Too many login attempts. Try again shortly.", 429, "TOO_MANY_LOGIN_ATTEMPTS");
     }
 
-    const user = await prisma.user.findUnique({ where: { username } });
+    const user = await prisma.user.findUnique({
+      where: { username },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        role: true,
+        passwordHash: true,
+        active: true,
+        forcePasswordChange: true,
+        updatedAt: true,
+      },
+    });
     if (!user || !user.active) {
       recordLoginFailure(attempt.key);
       throw new AppError("Invalid credentials", 401);
@@ -105,7 +118,14 @@ router.post(
     }
 
     const { oldPassword, newPassword } = req.body as z.infer<typeof changePasswordSchema>;
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        passwordHash: true,
+        active: true,
+      },
+    });
 
     if (!user || !user.active) {
       throw new AppError("User not found", 404);
@@ -142,6 +162,7 @@ router.post(
       sessionVersion: refreshed.updatedAt.toISOString(),
     });
 
+    clearUserCache();
     await writeAuditLog({
       actorId: userId,
       action: "auth.change-password",

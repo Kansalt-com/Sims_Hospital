@@ -1,8 +1,8 @@
-﻿import { Suspense, lazy } from "react";
+import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppLayout } from "./components/layout/AppLayout";
-import { Loader } from "./components/ui/Loader";
+import { GlobalLoader } from "./components/ui/GlobalLoader";
 
 const AdminSettingsPage = lazy(() => import("./pages/admin/AdminSettingsPage").then((module) => ({ default: module.AdminSettingsPage })));
 const AdminUsersPage = lazy(() => import("./pages/admin/AdminUsersPage").then((module) => ({ default: module.AdminUsersPage })));
@@ -26,7 +26,7 @@ const VisitsPage = lazy(() => import("./pages/visits/VisitsPage").then((module) 
 
 export const App = () => {
   return (
-    <Suspense fallback={<div className="p-6"><Loader text="Loading..." /></div>}>
+    <Suspense fallback={<GlobalLoader variant="fullPage" text="Loading workspace..." />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
 

@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import dayjs from "dayjs";
 import { prisma } from "../../db/prisma.js";
 import type { AuthenticatedRequest } from "../../middleware/auth.js";
+import { clearPrescriptionCache, clearReportingCache } from "../../services/cache.service.js";
 import { writeAuditLog } from "../../services/audit.service.js";
 import {
   computePaymentSummary,
@@ -11,6 +12,7 @@ import {
 } from "../../services/billing.service.js";
 import { AppError } from "../../utils/appError.js";
 import { parsePage } from "../../utils/pagination.js";
+import { buildTextSearchVariants } from "../../utils/search.js";
 import type {
   AddInvoicePaymentsInput,
   AppendInvoiceItemsInput,
@@ -19,8 +21,10 @@ import type {
 } from "./invoices.validation.js";
 
 export const listInvoices = async (query: InvoiceListQuery) => {
-  const { q, page, pageSize, date, paymentStatus, invoiceType } = query;
+  const { q, page, pageSize, date, paymentStatus, invoiceType, compact } = query;
   const { skip, take, page: safePage, pageSize: safeSize } = parsePage(page, pageSize);
+  const useCompactPayload = compact === "true";
+  const { query: searchQuery, digits, hasDigits, hasText } = buildTextSearchVariants(q ?? "");
 
   const where = {
     createdAt: date
@@ -31,42 +35,113 @@ export const listInvoices = async (query: InvoiceListQuery) => {
       : undefined,
     paymentStatus: paymentStatus ?? undefined,
     invoiceType: invoiceType ?? undefined,
-    OR: q
+    OR: searchQuery
       ? [
-          { invoiceNo: { contains: q } },
-          { patient: { name: { contains: q } } },
-          { patient: { phone: { contains: q } } },
-          { patient: { mrn: { contains: q } } },
+          { invoiceNo: { contains: searchQuery, mode: "insensitive" as const } },
+          ...(hasText ? [{ patient: { name: { contains: searchQuery, mode: "insensitive" as const } } }] : []),
+          ...(hasDigits ? [{ patient: { phone: { startsWith: digits } } }] : []),
+          { patient: { mrn: { contains: searchQuery, mode: "insensitive" as const } } },
         ]
       : undefined,
   };
 
-  const [total, rows] = await Promise.all([
-    prisma.invoice.count({ where }),
-    prisma.invoice.findMany({
-      where,
-      include: {
-        payments: true,
-        prescription: { select: { id: true, visitId: true, createdAt: true, printedAt: true } },
-        visit: {
-          include: {
-            patient: true,
-            doctor: {
-              select: {
-                id: true,
-                name: true,
-                doctorProfile: { select: { qualification: true, specialization: true, signaturePath: true } },
+  const listQueryArgs: Prisma.InvoiceFindManyArgs = useCompactPayload
+    ? {
+        where,
+        select: {
+          id: true,
+          visitId: true,
+          invoiceNo: true,
+          patientId: true,
+          doctorId: true,
+          invoiceType: true,
+          subtotal: true,
+          discount: true,
+          tax: true,
+          total: true,
+          paidAmount: true,
+          dueAmount: true,
+          paymentStatus: true,
+          paymentMode: true,
+          notes: true,
+          createdAt: true,
+          visit: {
+            select: {
+              id: true,
+              patient: {
+                select: {
+                  id: true,
+                  mrn: true,
+                  name: true,
+                  age: true,
+                  dob: true,
+                  gender: true,
+                  phone: true,
+                  address: true,
+                  idProof: true,
+                  active: true,
+                  createdAt: true,
+                  updatedAt: true,
+                },
+              },
+              doctor: {
+                select: {
+                  id: true,
+                  name: true,
+                },
               },
             },
           },
+          patient: {
+            select: {
+              id: true,
+              mrn: true,
+              name: true,
+              age: true,
+              dob: true,
+              gender: true,
+              phone: true,
+              address: true,
+              idProof: true,
+              active: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+          },
+          doctor: { select: { id: true, name: true } },
         },
-        patient: true,
-        doctor: { select: { id: true, name: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      skip,
-      take,
-    }),
+        orderBy: { createdAt: "desc" },
+        skip,
+        take,
+      }
+    : {
+        where,
+        include: {
+          payments: true,
+          prescription: { select: { id: true, visitId: true, createdAt: true, printedAt: true } },
+          visit: {
+            include: {
+              patient: true,
+              doctor: {
+                select: {
+                  id: true,
+                  name: true,
+                  doctorProfile: { select: { qualification: true, specialization: true, signaturePath: true } },
+                },
+              },
+            },
+          },
+          patient: true,
+          doctor: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take,
+      };
+
+  const [total, rows] = await Promise.all([
+    prisma.invoice.count({ where }),
+    prisma.invoice.findMany(listQueryArgs),
   ]);
 
   return {
@@ -292,6 +367,8 @@ export const createInvoice = async (payload: CreateInvoiceInput, req: Authentica
     });
   });
 
+  clearReportingCache();
+  clearPrescriptionCache();
   return invoice;
 };
 
@@ -373,6 +450,8 @@ export const addInvoicePayments = async (invoiceId: number, payload: AddInvoiceP
       client: tx,
     });
 
+    clearReportingCache();
+    clearPrescriptionCache();
     return row;
   });
 };
@@ -488,6 +567,8 @@ export const addInvoiceItems = async (invoiceId: number, payload: AppendInvoiceI
       client: tx,
     });
 
+    clearReportingCache();
+    clearPrescriptionCache();
     return updated;
   });
 };
@@ -556,5 +637,7 @@ export const cancelInvoice = async (invoiceId: number, req: AuthenticatedRequest
     });
   });
 
+  clearReportingCache();
+  clearPrescriptionCache();
   return { message: "Invoice cancelled successfully" };
 };

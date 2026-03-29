@@ -1,4 +1,5 @@
 import type { Request } from "express";
+import { env } from "../config/env.js";
 
 type LogLevel = "info" | "warn" | "error";
 
@@ -24,6 +25,25 @@ export const logWarn = (message: string, metadata?: Record<string, unknown>) =>
 
 export const logError = (message: string, metadata?: Record<string, unknown>) =>
   writeLog({ level: "error", message, ...(metadata ?? {}) });
+
+export const logSlowOperation = (
+  message: string,
+  durationMs: number,
+  metadata?: Record<string, unknown>,
+) => {
+  const payload = {
+    durationMs,
+    slowThresholdMs: env.slowRequestMs,
+    ...(metadata ?? {}),
+  };
+
+  if (durationMs >= env.slowRequestMs) {
+    logWarn(message, payload);
+    return;
+  }
+
+  logInfo(message, payload);
+};
 
 export const requestLogContext = (req: Request) => ({
   method: req.method,

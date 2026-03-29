@@ -81,6 +81,14 @@ api.interceptors.response.use(
 
 export const getErrorMessage = (error: unknown) => {
   if (axios.isAxiosError<ApiErrorPayload>(error)) {
+    if (error.code === "ECONNABORTED" || /timeout/i.test(error.message)) {
+      return "The server is taking too long to respond. Please try again.";
+    }
+
+    if (error.message === "Network Error") {
+      return "Unable to reach the server. Please check the connection and try again.";
+    }
+
     return error.response?.data?.message ?? error.message;
   }
 

@@ -4,7 +4,7 @@ import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Input } from "../../components/ui/Input";
-import { Loader } from "../../components/ui/Loader";
+import { SkeletonLoader } from "../../components/ui/SkeletonLoader";
 import { Select } from "../../components/ui/Select";
 import { formatCurrency, formatDate } from "../../utils/format";
 import type { VisitQueueItem } from "./visitTypes";
@@ -80,7 +80,7 @@ export const VisitQueueTable = ({
         </div>
       </div>
 
-      {loading ? <Loader /> : pageError ? <EmptyState text={pageError} action={<Button onClick={onRetry}>Retry</Button>} /> : filteredRows.length === 0 ? <EmptyState text="No OPD visits found." /> : (
+      {loading ? <SkeletonLoader variant="table" rows={8} columns={7} /> : pageError ? <EmptyState text={pageError} action={<Button onClick={onRetry}>Retry</Button>} /> : filteredRows.length === 0 ? <EmptyState text="No OPD visits found." /> : (
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead>

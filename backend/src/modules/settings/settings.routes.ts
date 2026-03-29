@@ -8,8 +8,10 @@ import { env } from "../../config/env.js";
 import { prisma } from "../../db/prisma.js";
 import { authenticate, authorize } from "../../middleware/auth.js";
 import { validateBody } from "../../middleware/validate.js";
+import { CACHE_PREFIXES, clearSettingsCache } from "../../services/cache.service.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { AppError } from "../../utils/appError.js";
+import { getOrSetCache } from "../../utils/memoryCache.js";
 
 const router = Router();
 
@@ -69,16 +71,18 @@ const ensureSettings = async () =>
 router.get(
   "/public",
   asyncHandler(async (_req, res) => {
-    const settings = await prisma.hospitalSettings.findUnique({
-      where: { id: 1 },
-      select: {
-        id: true,
-        hospitalName: true,
-        logoPath: true,
-        kansaltLogoPath: true,
-        updatedAt: true,
-      },
-    });
+    const settings = await getOrSetCache(`${CACHE_PREFIXES.settings}public`, 5 * 60_000, () =>
+      prisma.hospitalSettings.findUnique({
+        where: { id: 1 },
+        select: {
+          id: true,
+          hospitalName: true,
+          logoPath: true,
+          kansaltLogoPath: true,
+          updatedAt: true,
+        },
+      }),
+    );
 
     res.json({ data: settings });
   }),
@@ -89,7 +93,7 @@ router.use(authenticate);
 router.get(
   "/",
   asyncHandler(async (_req, res) => {
-    const settings = await ensureSettings();
+    const settings = await getOrSetCache(`${CACHE_PREFIXES.settings}private`, 60_000, ensureSettings);
     res.json({ data: settings });
   }),
 );
@@ -116,6 +120,7 @@ router.put(
       },
     });
 
+    clearSettingsCache();
     res.json({ data: settings });
   }),
 );
@@ -149,6 +154,7 @@ router.post(
       },
     });
 
+    clearSettingsCache();
     res.json({ data: updated });
   }),
 );

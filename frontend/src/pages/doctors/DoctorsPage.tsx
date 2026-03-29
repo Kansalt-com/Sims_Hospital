@@ -5,7 +5,7 @@ import { getErrorMessage } from "../../api/client";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
-import { Loader } from "../../components/ui/Loader";
+import { SkeletonLoader } from "../../components/ui/SkeletonLoader";
 import type { DoctorProfile, User } from "../../types";
 
 type DoctorRow = User & {
@@ -153,7 +153,7 @@ export const DoctorsPage = () => {
           <Input label={editingId ? "New Password (optional)" : "Password"} type="password" value={form.password} onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))} required={!editingId} />
 
           <div className="md:col-span-3 flex flex-wrap gap-2">
-            <Button type="submit" disabled={saving}>{saving ? "Saving..." : editingId ? "Update Doctor" : "Add Doctor"}</Button>
+            <Button type="submit" loading={saving}>{editingId ? "Update Doctor" : "Add Doctor"}</Button>
             <Button variant="secondary" type="button" onClick={resetForm}>Reset</Button>
           </div>
         </form>
@@ -175,7 +175,7 @@ export const DoctorsPage = () => {
           <Button variant="secondary" onClick={() => { setQuery(""); setStatusFilter("ALL"); load(""); }}>Reset</Button>
         </div>
 
-        {loading ? <Loader /> : (
+        {loading ? <SkeletonLoader variant="table" rows={7} columns={7} /> : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
               <thead>

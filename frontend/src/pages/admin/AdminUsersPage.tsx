@@ -5,7 +5,7 @@ import { userApi } from "../../api/services";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
-import { Loader } from "../../components/ui/Loader";
+import { SkeletonLoader } from "../../components/ui/SkeletonLoader";
 import { Select } from "../../components/ui/Select";
 import { useAuth } from "../../context/AuthContext";
 import type { User } from "../../types";
@@ -163,7 +163,7 @@ export const AdminUsersPage = () => {
             required
           />
           <div className="md:col-span-4">
-            <Button type="submit" disabled={saving}>{saving ? "Creating..." : "Create User"}</Button>
+            <Button type="submit" loading={saving}>Create User</Button>
           </div>
         </form>
       </Card>
@@ -191,7 +191,7 @@ export const AdminUsersPage = () => {
           </Button>
         </div>
         {loading ? (
-          <Loader />
+          <SkeletonLoader variant="table" rows={7} columns={6} />
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
@@ -231,10 +231,11 @@ export const AdminUsersPage = () => {
                           <Button
                             variant="danger"
                             className="h-9 px-3 py-1 text-xs"
-                            disabled={deleting || deletingLastAdmin}
+                            loading={deleting}
+                            disabled={deletingLastAdmin}
                             onClick={() => deleteUser(user)}
                           >
-                            {deleting ? "Deleting..." : "Delete"}
+                            Delete
                           </Button>
                         </div>
                       </td>

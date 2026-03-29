@@ -1,7 +1,7 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import type { Role } from "../types";
-import { Loader } from "./ui/Loader";
+import { GlobalLoader } from "./ui/GlobalLoader";
 
 export const ProtectedRoute = ({
   roles,
@@ -12,7 +12,7 @@ export const ProtectedRoute = ({
   const location = useLocation();
 
   if (loading) {
-    return <Loader text="Loading session..." />;
+    return <GlobalLoader variant="fullPage" text="Loading workspace..." />;
   }
 
   if (!user) {

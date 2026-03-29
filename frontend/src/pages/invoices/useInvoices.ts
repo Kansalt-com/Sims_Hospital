@@ -81,13 +81,20 @@ export const useInvoices = (
   const [paymentTarget, setPaymentTarget] = useState<InvoiceListItem | null>(null);
   const [paymentDraft, setPaymentDraft] = useState<PaymentFormState>(blankPayment());
 
+  const upsertVisit = (incomingVisit: VisitOption) => {
+    setVisits((prev) => {
+      const withoutExisting = prev.filter((visit) => visit.id !== incomingVisit.id);
+      return [incomingVisit, ...withoutExisting];
+    });
+  };
+
   const load = async (search = query, options?: { includeCancelled?: boolean }) => {
     setLoading(true);
     setPageError("");
     try {
       const tasks = [
-        invoiceApi.list({ page: 1, pageSize: 200, q: search }),
-        visitApi.list({ page: 1, pageSize: 100 }),
+        invoiceApi.list({ page: 1, pageSize: 100, q: search, compact: true }),
+        visitApi.list({ page: 1, pageSize: 100, compact: true }),
       ] as const;
 
       const includeCancelled = Boolean(options?.includeCancelled);
@@ -118,6 +125,32 @@ export const useInvoices = (
     }
     setVisitId(presetVisitId);
   }, [presetVisitId]);
+
+  useEffect(() => {
+    const activeVisitId = Number(visitId || presetVisitId);
+    if (!activeVisitId || visits.some((visit) => visit.id === activeVisitId)) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const hydrateSelectedVisit = async () => {
+      try {
+        const response = await visitApi.get(activeVisitId);
+        if (!cancelled) {
+          upsertVisit(response.data.data);
+        }
+      } catch {
+        // Keep the main billing screen usable even if the targeted visit refresh fails.
+      }
+    };
+
+    void hydrateSelectedVisit();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [presetVisitId, visitId, visits]);
 
   useEffect(() => {
     if (!presetDepartment) {

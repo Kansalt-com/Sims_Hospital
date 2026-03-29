@@ -1,7 +1,8 @@
 type CounterMap = Map<string, number>;
 
 const counters: CounterMap = new Map();
-const slowQueries: Array<{ model: string; operation: string; durationMs: number; at: string }> = [];
+const slowQueries: Array<{ target: string; operation: string; durationMs: number; at: string }> = [];
+const slowRequests: Array<{ route: string; method: string; durationMs: number; statusCode: number; at: string }> = [];
 
 const increment = (key: string, value = 1) => {
   counters.set(key, (counters.get(key) ?? 0) + value);
@@ -14,11 +15,25 @@ export const recordRequestMetric = (durationMs: number) => {
   }
 };
 
-export const recordSlowQuery = (model: string, operation: string, durationMs: number) => {
+export const recordSlowRequest = (route: string, method: string, statusCode: number, durationMs: number) => {
+  slowRequests.unshift({
+    route,
+    method,
+    statusCode,
+    durationMs,
+    at: new Date().toISOString(),
+  });
+
+  if (slowRequests.length > 50) {
+    slowRequests.length = 50;
+  }
+};
+
+export const recordSlowQuery = (target: string, operation: string, durationMs: number) => {
   increment("queries.total");
   increment("queries.slow");
   slowQueries.unshift({
-    model,
+    target,
     operation,
     durationMs,
     at: new Date().toISOString(),
@@ -36,6 +51,7 @@ export const recordQuery = () => {
 export const getMetricsSnapshot = () => ({
   counters: Object.fromEntries(counters.entries()),
   recentSlowQueries: [...slowQueries],
+  recentSlowRequests: [...slowRequests],
   uptimeSeconds: Math.round(process.uptime()),
   timestamp: new Date().toISOString(),
 });

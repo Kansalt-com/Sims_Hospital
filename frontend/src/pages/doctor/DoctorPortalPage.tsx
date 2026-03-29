@@ -7,9 +7,10 @@ import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Input } from "../../components/ui/Input";
-import { Loader } from "../../components/ui/Loader";
+import { SkeletonLoader } from "../../components/ui/SkeletonLoader";
 import { Textarea } from "../../components/ui/Textarea";
 import { formatDate, formatDateTime } from "../../utils/format";
+import { readCachedPageData, writeCachedPageData } from "../../utils/pageCache";
 
 type PrescriptionItem = {
   medicine: string;
@@ -28,10 +29,12 @@ const emptyPrescription = (): PrescriptionItem => ({
 });
 
 export const DoctorPortalPage = () => {
-  const [queue, setQueue] = useState<any[]>([]);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [detail, setDetail] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = "page-cache:doctor-portal";
+  const cached = readCachedPageData<{ queue: any[]; selectedId: number | null; detail: any | null }>(cacheKey);
+  const [queue, setQueue] = useState<any[]>(cached?.queue ?? []);
+  const [selectedId, setSelectedId] = useState<number | null>(cached?.selectedId ?? null);
+  const [detail, setDetail] = useState<any | null>(cached?.detail ?? null);
+  const [loading, setLoading] = useState(!cached);
   const [detailLoading, setDetailLoading] = useState(false);
   const [note, setNote] = useState("");
   const [prescription, setPrescription] = useState<PrescriptionItem[]>([emptyPrescription()]);
@@ -39,13 +42,24 @@ export const DoctorPortalPage = () => {
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   const loadQueue = async () => {
-    setLoading(true);
+    if (queue.length === 0) {
+      setLoading(true);
+    }
     try {
       const res = await visitApi.list({ date: today, page: 1, pageSize: 30 });
       setQueue(res.data.data);
       if (!selectedId && res.data.data.length > 0) {
         setSelectedId(res.data.data[0].id);
       }
+      writeCachedPageData(
+        cacheKey,
+        {
+          queue: res.data.data,
+          selectedId: selectedId ?? res.data.data[0]?.id ?? null,
+          detail,
+        },
+        60_000,
+      );
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -59,6 +73,15 @@ export const DoctorPortalPage = () => {
       const res = await visitApi.get(visitId);
       const visit = res.data.data;
       setDetail(visit);
+      writeCachedPageData(
+        cacheKey,
+        {
+          queue,
+          selectedId: visitId,
+          detail: visit,
+        },
+        60_000,
+      );
       const items = (() => {
         if (!visit.prescription?.itemsJson) return [emptyPrescription()];
         try {
@@ -151,7 +174,7 @@ export const DoctorPortalPage = () => {
         <Card className="h-fit">
           <h2 className="mb-3 text-lg font-semibold">Today Queue</h2>
           {loading ? (
-            <Loader />
+            <SkeletonLoader variant="list" rows={5} />
           ) : queue.length === 0 ? (
             <EmptyState text="No appointments for today." />
           ) : (
@@ -177,7 +200,7 @@ export const DoctorPortalPage = () => {
 
         <Card>
           {detailLoading ? (
-            <Loader text="Loading chart..." />
+            <SkeletonLoader variant="panel" />
           ) : !detail ? (
             <EmptyState text="Select an appointment." />
           ) : (

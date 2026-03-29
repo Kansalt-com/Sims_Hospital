@@ -8,8 +8,8 @@ import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Input } from "../../components/ui/Input";
-import { Loader } from "../../components/ui/Loader";
 import { Select } from "../../components/ui/Select";
+import { SkeletonLoader } from "../../components/ui/SkeletonLoader";
 import type { IPDAdmission, Patient, Room, User } from "../../types";
 import { formatDateTime } from "../../utils/format";
 
@@ -151,7 +151,7 @@ export const IpdPage = () => {
           <Input label="Diagnosis" value={form.diagnosis} onChange={(e) => setForm((p) => ({ ...p, diagnosis: e.target.value }))} />
           <Input label="Reason for Admission" value={form.reason} onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))} />
           <div className="md:col-span-3">
-            <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Admit Patient"}</Button>
+            <Button type="submit" loading={saving}>Admit Patient</Button>
           </div>
         </form>
       </Card>
@@ -169,7 +169,7 @@ export const IpdPage = () => {
           <Button onClick={load}>Apply</Button>
         </div>
 
-        {loading ? <Loader /> : rows.length === 0 ? <EmptyState text="No IPD records found." /> : (
+        {loading ? <SkeletonLoader variant="table" rows={7} columns={7} /> : rows.length === 0 ? <EmptyState text="No IPD records found." /> : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
               <thead>

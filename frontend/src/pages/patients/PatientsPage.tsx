@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
+import * as React from "react";
 import { Link } from "react-router-dom";
 import { getErrorMessage } from "../../api/client";
 import { patientApi } from "../../api/services";
@@ -13,6 +14,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { Patient } from "../../types";
 import { formatDateTime } from "../../utils/format";
+import { readCachedPageData, writeCachedPageData } from "../../utils/pageCache";
 
 type PatientForm = {
   name: string;
@@ -35,19 +37,22 @@ const defaultForm: PatientForm = {
 };
 
 export const PatientsPage = () => {
+  const cacheKey = "page-cache:patients";
   const { user } = useAuth();
-  const [rows, setRows] = useState<Patient[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cached = readCachedPageData<{ rows: Patient[]; page: number; totalPages: number; search: string }>(cacheKey);
+  const [rows, setRows] = useState<Patient[]>(cached?.rows ?? []);
+  const [loading, setLoading] = useState(!cached);
   const [search, setSearch] = useState("");
   const [genderFilter, setGenderFilter] = useState<"ALL" | Patient["gender"]>("ALL");
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [page, setPage] = useState(cached?.page ?? 1);
+  const [totalPages, setTotalPages] = useState(cached?.totalPages ?? 1);
   const [formOpen, setFormOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [editing, setEditing] = useState<Patient | null>(null);
   const [form, setForm] = useState<PatientForm>(defaultForm);
   const debouncedSearch = useDebouncedValue(search, 300);
+  const hasHydratedSearch = React.useRef(false);
 
   const canEdit = useMemo(() => user?.role === "ADMIN" || user?.role === "RECEPTION", [user?.role]);
   const filteredRows = useMemo(
@@ -56,12 +61,24 @@ export const PatientsPage = () => {
   );
 
   const load = async (nextPage = page, query = search) => {
-    setLoading(true);
+    if (rows.length === 0) {
+      setLoading(true);
+    }
     try {
       const res = await patientApi.list({ page: nextPage, limit: 20, q: query });
       setRows(res.data.data);
       setTotalPages(res.data.pagination.totalPages || 1);
       setPage(nextPage);
+      writeCachedPageData(
+        cacheKey,
+        {
+          rows: res.data.data,
+          page: nextPage,
+          totalPages: res.data.pagination.totalPages || 1,
+          search: query,
+        },
+        2 * 60_000,
+      );
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -74,6 +91,10 @@ export const PatientsPage = () => {
   }, []);
 
   useEffect(() => {
+    if (!hasHydratedSearch.current) {
+      hasHydratedSearch.current = true;
+      return;
+    }
     load(1, debouncedSearch);
   }, [debouncedSearch]);
 
@@ -171,7 +192,7 @@ export const PatientsPage = () => {
         {canEdit ? (
           <div className="flex flex-wrap gap-2">
             <label className="inline-flex cursor-pointer items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">
-              {uploading ? "Uploading..." : "Bulk Upload Excel"}
+              {uploading ? "Syncing Upload" : "Bulk Upload Excel"}
               <input type="file" accept=".xlsx,.xls" className="hidden" onChange={onBulkUpload} disabled={uploading} />
             </label>
             <Button
@@ -263,7 +284,7 @@ export const PatientsPage = () => {
               required
             />
             <div className="md:col-span-2 flex gap-2">
-              <Button type="submit" disabled={saving}>{saving ? "Saving..." : editing ? "Update" : "Register"}</Button>
+              <Button type="submit" loading={saving}>{editing ? "Update" : "Register"}</Button>
               <Button
                 type="button"
                 variant="secondary"

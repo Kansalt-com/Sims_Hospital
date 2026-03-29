@@ -5,7 +5,7 @@ import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Input } from "../../components/ui/Input";
-import { Loader } from "../../components/ui/Loader";
+import { SkeletonLoader } from "../../components/ui/SkeletonLoader";
 import { Select } from "../../components/ui/Select";
 import { formatCurrency, formatDateTime } from "../../utils/format";
 import type { CancelledInvoiceLog, InvoiceListItem } from "./invoiceTypes";
@@ -123,7 +123,7 @@ export const InvoiceListTable = ({
       </div>
 
       {loading ? (
-        <Loader />
+        <SkeletonLoader variant="table" rows={8} columns={8} />
       ) : pageError ? (
         <EmptyState
           text={pageError}

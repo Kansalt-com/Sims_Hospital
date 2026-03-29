@@ -103,6 +103,9 @@ model User {
   recordedPayments     Payment[]          @relation("PaymentRecordedBy")
   doctorInvoices       Invoice[]          @relation("InvoiceDoctor")
   auditLogs            AuditLog[]         @relation("AuditActor")
+
+  @@index([role, active])
+  @@index([updatedAt])
 }
 
 model Patient {
@@ -130,6 +133,8 @@ model Patient {
 
   @@index([name])
   @@index([phone])
+  @@index([active, createdAt])
+  @@index([active, updatedAt])
 }
 
 model Visit {
@@ -158,6 +163,10 @@ model Visit {
   @@index([patientId])
   @@index([doctorId])
   @@index([scheduledAt])
+  @@index([createdAt])
+  @@index([status, scheduledAt])
+  @@index([doctorId, status, scheduledAt])
+  @@index([patientId, createdAt])
   @@index([type, status, scheduledAt])
 }
 
@@ -195,6 +204,8 @@ model Prescription {
 
   @@index([patientId])
   @@index([invoiceId])
+  @@index([doctorId, createdAt])
+  @@index([patientId, createdAt])
 }
 
 model Invoice {
@@ -229,6 +240,8 @@ model Invoice {
   @@index([patientId, createdAt])
   @@index([doctorId, createdAt])
   @@index([paymentStatus, createdAt])
+  @@index([invoiceType, createdAt])
+  @@index([patientId, paymentStatus, createdAt])
 }
 
 model InvoiceItem {
@@ -276,6 +289,8 @@ model DoctorProfile {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([specialization])
 }
 
 model IPDAdmission {
@@ -312,6 +327,8 @@ model IPDAdmission {
   @@index([status])
   @@index([admittedAt])
   @@index([bedId, status])
+  @@index([attendingDoctorId, status, admittedAt])
+  @@index([patientId, status, admittedAt])
 }
 
 model OpdToIpdTransfer {
@@ -382,6 +399,8 @@ model Payment {
 
   @@index([invoiceId, receivedAt])
   @@index([patientId, receivedAt])
+  @@index([receivedAt])
+  @@index([paymentMode, receivedAt])
 }
 
 model Permission {
@@ -428,4 +447,7 @@ model AuditLog {
   @@index([entityType, entityId, createdAt])
   @@index([patientId, createdAt])
   @@index([actorId, createdAt])
+  @@index([action, createdAt])
+  @@index([invoiceId, createdAt])
+  @@index([visitId, createdAt])
 }

@@ -1,5 +1,7 @@
 import { prisma } from "../db/prisma.js";
+import { CACHE_PREFIXES } from "./cache.service.js";
 import type { UserRoleValue } from "../types/domain.js";
+import { getOrSetCache } from "../utils/memoryCache.js";
 
 export const SYSTEM_PERMISSIONS = [
   {
@@ -72,18 +74,20 @@ const ROLE_PERMISSION_CODES: Record<UserRoleValue, string[]> = {
 };
 
 export const getPermissionsForRole = async (role: UserRoleValue) => {
-  const rows = await prisma.rolePermission.findMany({
-    where: { role },
-    include: {
-      permission: {
-        select: {
-          code: true,
+  return getOrSetCache(`${CACHE_PREFIXES.authPermissions}${role}`, 5 * 60_000, async () => {
+    const rows = await prisma.rolePermission.findMany({
+      where: { role },
+      include: {
+        permission: {
+          select: {
+            code: true,
+          },
         },
       },
-    },
-  });
+    });
 
-  return rows.map((row: typeof rows[number]) => row.permission.code).sort();
+    return rows.map((row: typeof rows[number]) => row.permission.code).sort();
+  });
 };
 
 export const ensurePermissionCatalog = async () => {

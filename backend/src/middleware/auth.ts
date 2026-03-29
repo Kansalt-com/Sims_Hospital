@@ -1,9 +1,11 @@
 import type { NextFunction, Request, Response } from "express";
 import { prisma } from "../db/prisma.js";
+import { CACHE_PREFIXES } from "../services/cache.service.js";
 import { getPermissionsForRole } from "../services/permission.service.js";
 import type { UserRoleValue } from "../types/domain.js";
 import { AppError } from "../utils/appError.js";
 import { verifyToken } from "../utils/jwt.js";
+import { getOrSetCache } from "../utils/memoryCache.js";
 
 export type AuthenticatedUser = {
   id: number;
@@ -39,10 +41,23 @@ export const authenticate = async (
     const token = authHeader.slice("Bearer ".length);
     const payload = verifyToken(token);
 
-    const user = await prisma.user.findUnique({
-      where: { id: payload.userId },
-      select: { id: true, role: true, username: true, name: true, active: true, forcePasswordChange: true, updatedAt: true },
-    });
+    const user = await getOrSetCache(
+      `${CACHE_PREFIXES.authUser}${payload.userId}:${payload.sessionVersion}`,
+      60_000,
+      () =>
+        prisma.user.findUnique({
+          where: { id: payload.userId },
+          select: {
+            id: true,
+            role: true,
+            username: true,
+            name: true,
+            active: true,
+            forcePasswordChange: true,
+            updatedAt: true,
+          },
+        }),
+    );
 
     if (!user || !user.active) {
       return sendAuthError(res, "User account is inactive", "SESSION_INVALID");

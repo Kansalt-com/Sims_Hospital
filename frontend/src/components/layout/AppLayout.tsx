@@ -1,3 +1,4 @@
+import React from "react";
 import {
   Activity,
   BedDouble,
@@ -13,9 +14,10 @@ import {
   Users,
   UserSquare2,
 } from "lucide-react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { HospitalBrand } from "../branding/HospitalBrand";
 import { Footer } from "./Footer";
+import { RouteTransition } from "./RouteTransition";
 import { useAuth } from "../../context/AuthContext";
 import type { Role } from "../../types";
 
@@ -24,19 +26,20 @@ type NavItem = {
   label: string;
   roles: Role[];
   icon: React.ReactNode;
+  preload?: () => Promise<unknown>;
 };
 
 const navItems: NavItem[] = [
-  { to: "/dashboard", label: "Dashboard", roles: ["ADMIN", "RECEPTION", "DOCTOR", "BILLING", "PHARMACY", "LAB_TECHNICIAN"], icon: <LayoutDashboard size={18} /> },
+  { to: "/dashboard", label: "Dashboard", roles: ["ADMIN", "RECEPTION", "DOCTOR", "BILLING", "PHARMACY", "LAB_TECHNICIAN"], icon: <LayoutDashboard size={18} />, preload: () => import("../../pages/DashboardPage") },
   { to: "/reports", label: "Reports", roles: ["ADMIN", "RECEPTION", "DOCTOR", "BILLING", "PHARMACY", "LAB_TECHNICIAN"], icon: <FileBarChart2 size={18} /> },
-  { to: "/patients", label: "Patients", roles: ["ADMIN", "RECEPTION", "DOCTOR"], icon: <Users size={18} /> },
+  { to: "/patients", label: "Patients", roles: ["ADMIN", "RECEPTION", "DOCTOR"], icon: <Users size={18} />, preload: () => import("../../pages/patients/PatientsPage") },
   { to: "/visits", label: "OPD", roles: ["ADMIN", "RECEPTION"], icon: <Activity size={18} /> },
-  { to: "/ipd", label: "IPD", roles: ["ADMIN", "RECEPTION", "DOCTOR"], icon: <BedDouble size={18} /> },
-  { to: "/invoices", label: "Billing", roles: ["ADMIN", "RECEPTION", "DOCTOR", "BILLING", "PHARMACY"], icon: <CreditCard size={18} /> },
+  { to: "/ipd", label: "IPD", roles: ["ADMIN", "RECEPTION", "DOCTOR"], icon: <BedDouble size={18} />, preload: () => import("../../pages/ipd/IpdPage") },
+  { to: "/invoices", label: "Billing", roles: ["ADMIN", "RECEPTION", "DOCTOR", "BILLING", "PHARMACY"], icon: <CreditCard size={18} />, preload: () => import("../../pages/invoices/InvoicesPage") },
   { to: "/labs", label: "Labs", roles: ["ADMIN", "RECEPTION", "DOCTOR", "BILLING", "LAB_TECHNICIAN"], icon: <FlaskConical size={18} /> },
   { to: "/ot", label: "OT Module", roles: ["ADMIN", "RECEPTION", "DOCTOR", "BILLING"], icon: <Scissors size={18} /> },
   { to: "/prescriptions", label: "Prescription", roles: ["ADMIN", "RECEPTION", "DOCTOR"], icon: <ClipboardPlus size={18} /> },
-  { to: "/doctor", label: "Doctor Portal", roles: ["DOCTOR"], icon: <Stethoscope size={18} /> },
+  { to: "/doctor", label: "Doctor Portal", roles: ["DOCTOR"], icon: <Stethoscope size={18} />, preload: () => import("../../pages/doctor/DoctorPortalPage") },
   { to: "/doctors", label: "Doctors", roles: ["ADMIN"], icon: <Stethoscope size={18} /> },
   { to: "/admin/users", label: "Users", roles: ["ADMIN"], icon: <UserSquare2 size={18} /> },
   { to: "/admin/settings", label: "Settings", roles: ["ADMIN"], icon: <Settings size={18} /> },
@@ -47,6 +50,17 @@ export const AppLayout = () => {
   const navigate = useNavigate();
   const allowedItems = navItems.filter((item) => item.roles.includes(user!.role));
 
+  const prefetchRoute = (item: NavItem) => {
+    void item.preload?.();
+  };
+
+  React.useEffect(() => {
+    const preloadCandidates = allowedItems.slice(0, 4);
+    preloadCandidates.forEach((item) => {
+      prefetchRoute(item);
+    });
+  }, [allowedItems]);
+
   return (
     <div className="flex min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.12),_transparent_28%),linear-gradient(180deg,_rgba(248,250,252,0.96),_rgba(241,245,249,0.96))]">
       <aside className="w-72 border-r border-slate-200/80 bg-white/90 p-5 backdrop-blur-xl">
@@ -55,6 +69,8 @@ export const AppLayout = () => {
             <NavLink
               key={item.to}
               to={item.to}
+              onMouseEnter={() => prefetchRoute(item)}
+              onFocus={() => prefetchRoute(item)}
               className={({ isActive }) =>
                 [
                   "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-200",
@@ -93,7 +109,7 @@ export const AppLayout = () => {
         </header>
 
         <section className="flex-1 p-6">
-          <Outlet />
+          <RouteTransition />
         </section>
 
         <Footer />

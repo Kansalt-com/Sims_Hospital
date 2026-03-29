@@ -58,8 +58,16 @@ SCM_DO_BUILD_DURING_DEPLOYMENT=false
 Startup command:
 
 ```text
-sh start-appservice.sh
+bash -c "mkdir -p /home/site/uploads /home/site/logs; cd /home/site/wwwroot; exec node backend/dist/src/server.js"
 ```
+
+If you need Prisma schema work during startup, temporarily switch the startup command to:
+
+```text
+bash start-appservice.sh
+```
+
+Keep shell scripts committed with LF line endings. The repository now enforces this via `.gitattributes`.
 
 ## GitHub Secrets
 
@@ -93,7 +101,7 @@ SUPABASE_KEY
 2. GitHub Actions builds frontend and backend
 3. GitHub Actions packages a ZIP artifact
 4. GitHub deploys the ZIP to App Service
-5. App Service only runs `sh start-appservice.sh`
+5. App Service runs the direct Node startup command
 6. Node starts immediately with `backend/dist/src/server.js`
 
 ## Why This Is Stable

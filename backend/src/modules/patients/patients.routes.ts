@@ -4,16 +4,24 @@ import XLSX from "xlsx";
 import { z } from "zod";
 import { prisma } from "../../db/prisma.js";
 import { authenticate, authorize, type AuthenticatedRequest } from "../../middleware/auth.js";
+import { createRequestRateLimiter } from "../../middleware/requestRateLimit.js";
 import { validateBody, validateParams, validateQuery } from "../../middleware/validate.js";
+import { clearPatientCache, CACHE_PREFIXES } from "../../services/cache.service.js";
 import { GENDERS } from "../../types/domain.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { AppError } from "../../utils/appError.js";
 import { generateMrn } from "../../utils/id.js";
-import { clearCache, getOrSetCache } from "../../utils/memoryCache.js";
+import { getOrSetCache } from "../../utils/memoryCache.js";
 import { parsePage } from "../../utils/pagination.js";
+import { buildTextSearchVariants, normalizeSearchTerm } from "../../utils/search.js";
 
 const router = Router();
 const bulkUpload = multer({ storage: multer.memoryStorage() });
+const patientSearchRateLimit = createRequestRateLimiter({
+  key: "patients.search",
+  windowMs: 60_000,
+  maxRequests: 120,
+});
 
 const patientSchema = z.object({
   name: z.string().min(2),
@@ -32,6 +40,21 @@ const listQuerySchema = z.object({
   limit: z.string().optional(),
   active: z.enum(["true", "false"]).optional(),
 });
+
+const patientListSelect = {
+  id: true,
+  mrn: true,
+  name: true,
+  dob: true,
+  age: true,
+  gender: true,
+  phone: true,
+  address: true,
+  idProof: true,
+  active: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
 
 const bulkPatientRowSchema = z.object({
   name: z.string().min(2),
@@ -53,6 +76,33 @@ const normalizeName = (value: string) =>
     .toLowerCase();
 
 const normalizePhone = (value: string) => value.replace(/\D/g, "");
+
+const buildPatientSearchWhere = (rawQuery?: string, active?: "true" | "false") => {
+  const { query, digits, hasDigits, hasText } = buildTextSearchVariants(rawQuery ?? "");
+  const orFilters: Array<Record<string, unknown>> = [];
+
+  if (hasDigits) {
+    if (digits.length >= 7) {
+      orFilters.push({ phone: digits });
+    }
+    orFilters.push({ phone: { startsWith: digits } });
+    orFilters.push({ mrn: { startsWith: query, mode: "insensitive" as const } });
+  }
+
+  if (hasText) {
+    orFilters.push({ name: { startsWith: query, mode: "insensitive" as const } });
+    if (query.length >= 3) {
+      orFilters.push({ name: { contains: query, mode: "insensitive" as const } });
+    }
+    orFilters.push({ mrn: { contains: query, mode: "insensitive" as const } });
+    orFilters.push({ idProof: { contains: query, mode: "insensitive" as const } });
+  }
+
+  return {
+    active: active === undefined ? undefined : active === "true",
+    OR: orFilters.length > 0 ? orFilters : undefined,
+  };
+};
 
 const createPatientWithUniqueMrn = async (data: {
   name: string;
@@ -135,53 +185,24 @@ router.use(authenticate);
 
 router.get(
   "/",
+  patientSearchRateLimit,
   validateQuery(listQuerySchema),
   asyncHandler(async (req, res) => {
     const { q, page, pageSize, limit, active } = req.query as z.infer<typeof listQuerySchema>;
-    const requestedLimit = limit ?? pageSize ?? "20";
-    const parsedPage = Math.max(1, Number(page ?? 1) || 1);
-    const parsedLimit = Math.min(50, Math.max(1, Number(requestedLimit) || 20));
-    const { skip, take, page: safePage, pageSize: safeSize } = parsePage(String(parsedPage), String(parsedLimit));
-    const trimmedQuery = q?.trim();
-    const effectiveTake = trimmedQuery ? Math.min(take, 20) : take;
-
-    const where = {
-      active: active === undefined ? undefined : active === "true",
-      OR: trimmedQuery
-        ? [
-            { name: { contains: trimmedQuery } },
-            { phone: { contains: trimmedQuery } },
-            { mrn: { contains: trimmedQuery } },
-            { idProof: { contains: trimmedQuery } },
-          ]
-        : undefined,
-    };
-
-    const cacheKey = trimmedQuery
-      ? `patients:search:${trimmedQuery}:${safePage}:${effectiveTake}:${active ?? "all"}`
-      : `patients_page_${safePage}_${effectiveTake}_${active ?? "all"}`;
+    const requestedLimit = limit ?? pageSize;
+    const { skip, take, page: safePage, pageSize: safeSize } = parsePage(page, requestedLimit);
+    const trimmedQuery = normalizeSearchTerm(q);
+    const where = buildPatientSearchWhere(trimmedQuery, active);
+    const cacheKey = `${CACHE_PREFIXES.patients}list:${trimmedQuery || "recent"}:${safePage}:${safeSize}:${active ?? "all"}`;
     const payload = await getOrSetCache(cacheKey, 5 * 60_000, async () => {
       const [total, rows] = await Promise.all([
         prisma.patient.count({ where }),
         prisma.patient.findMany({
           where,
           skip,
-          take: effectiveTake,
-          orderBy: trimmedQuery ? [{ name: "asc" }] : [{ createdAt: "desc" }],
-          select: {
-            id: true,
-            mrn: true,
-            name: true,
-            dob: true,
-            age: true,
-            gender: true,
-            phone: true,
-            address: true,
-            idProof: true,
-            active: true,
-            createdAt: true,
-            updatedAt: true,
-          },
+          take,
+          orderBy: trimmedQuery ? [{ updatedAt: "desc" }, { name: "asc" }] : [{ createdAt: "desc" }],
+          select: patientListSelect,
         }),
       ]);
 
@@ -189,9 +210,9 @@ router.get(
         data: rows,
         pagination: {
           page: safePage,
-          pageSize: effectiveTake,
+          pageSize: safeSize,
           total,
-          totalPages: Math.ceil(total / effectiveTake),
+          totalPages: Math.ceil(total / safeSize),
         },
       };
     });
@@ -202,58 +223,48 @@ router.get(
 
 router.get(
   "/search",
+  patientSearchRateLimit,
   validateQuery(
     z.object({
       q: z.string().optional(),
+      page: z.string().optional(),
+      pageSize: z.string().optional(),
       active: z.enum(["true", "false"]).optional(),
     }),
   ),
   asyncHandler(async (req, res) => {
-    const { q, active } = req.query as { q?: string; active?: "true" | "false" };
-    const trimmedQuery = q?.trim() ?? "";
+    const { q, active, page, pageSize } = req.query as {
+      q?: string;
+      active?: "true" | "false";
+      page?: string;
+      pageSize?: string;
+    };
+    const { skip, take, page: safePage, pageSize: safeSize } = parsePage(page, pageSize);
+    const trimmedQuery = normalizeSearchTerm(q);
+    const where = buildPatientSearchWhere(trimmedQuery, active);
 
-    const where = trimmedQuery
-      ? {
-          active: active === undefined ? undefined : active === "true",
-          OR: [
-            { name: { contains: trimmedQuery } },
-            { phone: { contains: trimmedQuery } },
-          ],
-        }
-      : {
-          active: active === undefined ? undefined : active === "true",
-        };
-
-    const cacheKey = trimmedQuery
-      ? `patients:search:${trimmedQuery}:1:20:${active ?? "all"}`
-      : `patients:search:recent:${active ?? "all"}`;
+    const cacheKey = `${CACHE_PREFIXES.patients}search:${trimmedQuery || "recent"}:${safePage}:${safeSize}:${active ?? "all"}`;
 
     const payload = await getOrSetCache(cacheKey, 5 * 60_000, async () => {
-      const rows = await prisma.patient.findMany({
-        where,
-        take: 20,
-        orderBy: trimmedQuery ? [{ name: "asc" }] : [{ createdAt: "desc" }],
-        select: {
-          id: true,
-          mrn: true,
-          name: true,
-          dob: true,
-          age: true,
-          gender: true,
-          phone: true,
-          address: true,
-          idProof: true,
-          active: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      });
+      const [total, rows] = await Promise.all([
+        prisma.patient.count({ where }),
+        prisma.patient.findMany({
+          where,
+          skip,
+          take,
+          orderBy: trimmedQuery ? [{ updatedAt: "desc" }, { name: "asc" }] : [{ createdAt: "desc" }],
+          select: patientListSelect,
+        }),
+      ]);
 
       return {
         data: rows,
-        total: rows.length,
-        page: 1,
-        limit: 20,
+        pagination: {
+          page: safePage,
+          pageSize: safeSize,
+          total,
+          totalPages: Math.ceil(total / safeSize),
+        },
       };
     });
 
@@ -354,7 +365,7 @@ router.post(
       createdById: req.user?.id,
     });
 
-    clearCache("patients:list:");
+    clearPatientCache();
 
     res.status(201).json({ data: patient });
   }),
@@ -449,7 +460,7 @@ router.post(
       });
     }
 
-    clearCache("patients:list:");
+    clearPatientCache();
 
     res.status(201).json({
       data: {
@@ -496,7 +507,7 @@ router.put(
       },
     });
 
-    clearCache("patients:list:");
+    clearPatientCache();
 
     res.json({ data: patient });
   }),
@@ -519,7 +530,7 @@ router.delete(
       data: { active: false },
     });
 
-    clearCache("patients:list:");
+    clearPatientCache();
 
     res.json({ data: patient, message: "Patient deleted" });
   }),

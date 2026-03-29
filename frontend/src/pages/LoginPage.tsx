@@ -105,8 +105,8 @@ export const LoginPage = () => {
             <Input label="Password" type="password" placeholder="Enter password" value={password} onChange={(e) => setPassword(e.target.value)} required />
           </div>
 
-          <Button type="submit" className="mt-6 w-full" disabled={loading}>
-            {loading ? "Signing in..." : "Login"}
+          <Button type="submit" className="mt-6 w-full" loading={loading}>
+            Login
           </Button>
           <PoweredByKansalt className="mt-4 justify-center text-xs text-slate-500 lg:hidden" />
         </form>

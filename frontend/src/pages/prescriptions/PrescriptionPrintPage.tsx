@@ -4,7 +4,7 @@ import { useLocation, useParams } from "react-router-dom";
 import { getErrorMessage } from "../../api/client";
 import { doctorApi, prescriptionApi, settingsApi, visitApi } from "../../api/services";
 import { PrescriptionPrint } from "../../components/prescription/PrescriptionPrint";
-import { Loader } from "../../components/ui/Loader";
+import { GlobalLoader } from "../../components/ui/GlobalLoader";
 import { useAuth } from "../../context/AuthContext";
 import type { HospitalSettings, User, Visit } from "../../types";
 import "../../styles/print.css";
@@ -95,7 +95,7 @@ export const PrescriptionPrintPage = () => {
   }, [visit?.prescription?.id]);
 
   if (loading) {
-    return <Loader text="Loading prescription..." />;
+    return <GlobalLoader variant="fullPage" text="Preparing prescription..." />;
   }
 
   if (!visit || !settings) {

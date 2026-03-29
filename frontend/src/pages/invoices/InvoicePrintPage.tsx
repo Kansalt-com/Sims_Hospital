@@ -8,7 +8,7 @@ import { invoiceApi } from "../../api/services";
 import { BillLayout } from "../../components/print/BillLayout";
 import type { BillSection } from "../../components/print/BillTable";
 import { Button } from "../../components/ui/Button";
-import { Loader } from "../../components/ui/Loader";
+import { GlobalLoader } from "../../components/ui/GlobalLoader";
 import { useServiceCatalog } from "../../hooks/useServiceCatalog";
 import type { HospitalSettings, Invoice, InvoiceItem } from "../../types";
 import { buildPublicAssetPath } from "../../utils/branding";
@@ -295,7 +295,7 @@ export const InvoicePrintPage = () => {
   };
 
   if (loading) {
-    return <Loader text="Loading bill..." />;
+    return <GlobalLoader variant="fullPage" text="Preparing bill view..." />;
   }
 
   if (!invoice || !settings) {
@@ -310,20 +310,16 @@ export const InvoicePrintPage = () => {
           <p className="text-sm text-slate-500">SIMS bill layout for print, PDF export, and patient sharing.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={handleMarkPaidAndPrint} disabled={markingPaid}>
-            {markingPaid
-              ? "Marking Paid..."
-              : Number(invoice.dueAmount || 0) > 0
-                ? "Mark Paid & Print"
-                : "Print Bill"}
+          <Button onClick={handleMarkPaidAndPrint} loading={markingPaid}>
+            {Number(invoice.dueAmount || 0) > 0 ? "Mark Paid & Print" : "Print Bill"}
           </Button>
           {invoice.visit.type === "OPD" ? (
             <Link to={`/prescriptions/${invoice.visit.id}/print`} state={{ backTo: backTo || `/invoices/${invoice.id}/print` }}>
               <Button variant="secondary">Print Prescription</Button>
             </Link>
           ) : null}
-          <Button variant="secondary" onClick={handleDownload} disabled={downloading}>
-            {downloading ? "Preparing PDF..." : "Download Bill"}
+          <Button variant="secondary" onClick={handleDownload} loading={downloading}>
+            Download Bill
           </Button>
           <Link to={`/invoices?visitId=${invoice.visit.id}`} state={{ backTo: `/invoices/${invoice.id}/print` }}>
             <Button variant="secondary">Back to Billing</Button>

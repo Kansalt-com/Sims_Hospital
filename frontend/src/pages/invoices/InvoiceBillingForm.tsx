@@ -262,8 +262,8 @@ export const InvoiceBillingForm = ({
 
         <FormSection title="Actions" description="Create a new bill or append these charges to the existing bill.">
           <div className="flex flex-wrap gap-3">
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving..." : existingInvoice ? "Add Charges to Bill" : "Create Bill"}
+            <Button type="submit" loading={saving}>
+              {existingInvoice ? "Add Charges to Bill" : "Create Bill"}
             </Button>
             <Button variant="secondary" onClick={onReset}>Clear Form</Button>
             {lastCreatedInvoiceId ? (

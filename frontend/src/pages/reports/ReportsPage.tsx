@@ -5,7 +5,7 @@ import { getErrorMessage } from "../../api/client";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
-import { Loader } from "../../components/ui/Loader";
+import { SkeletonLoader } from "../../components/ui/SkeletonLoader";
 import type { AnalyticsReport } from "../../types";
 import { formatCurrency } from "../../utils/format";
 
@@ -56,7 +56,16 @@ export const ReportsPage = () => {
   }, []);
 
   if (loading && !report) {
-    return <Loader />;
+    return (
+      <div className="space-y-6">
+        <SkeletonLoader variant="panel" />
+        <SkeletonLoader variant="cards" rows={4} className="xl:grid-cols-4" />
+        <div className="grid gap-6 xl:grid-cols-3">
+          <SkeletonLoader variant="table" rows={6} columns={3} className="xl:col-span-2" />
+          <SkeletonLoader variant="list" rows={4} />
+        </div>
+      </div>
+    );
   }
 
   if (pageError && !report) {
@@ -94,9 +103,11 @@ export const ReportsPage = () => {
               onChange={(event) => setToDate(event.target.value)}
             />
           </label>
-          <Button onClick={() => load(fromDate, toDate)}>Generate Report</Button>
-          <Button variant="secondary" onClick={exportReport} disabled={exporting}>
-            <Download size={16} /> {exporting ? "Exporting..." : "Export XLS"}
+          <Button onClick={() => load(fromDate, toDate)} loading={loading}>
+            Generate Report
+          </Button>
+          <Button variant="secondary" onClick={exportReport} loading={exporting}>
+            <Download size={16} /> Export XLS
           </Button>
           <Button variant="secondary" onClick={() => window.print()}>
             <Printer size={16} /> Print

@@ -8,7 +8,7 @@ import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Input } from "../../components/ui/Input";
-import { Loader } from "../../components/ui/Loader";
+import { SkeletonLoader } from "../../components/ui/SkeletonLoader";
 import { formatDate } from "../../utils/format";
 
 export const PrescriptionPage = () => {
@@ -49,7 +49,7 @@ export const PrescriptionPage = () => {
           <Button variant="secondary" onClick={() => { setQuery(""); load(""); }}>Reset</Button>
         </div>
 
-        {loading ? <Loader /> : rows.length === 0 ? <EmptyState text="No billed OPD visits found for prescription printing." /> : (
+        {loading ? <SkeletonLoader variant="table" rows={6} columns={6} /> : rows.length === 0 ? <EmptyState text="No billed OPD visits found for prescription printing." /> : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
               <thead>

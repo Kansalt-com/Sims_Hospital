@@ -32,6 +32,9 @@ export const listQuerySchema = z.object({
   page: z.string().optional(),
   pageSize: z.string().optional(),
   q: z.string().optional(),
+  compact: z
+    .union([z.literal("true"), z.literal("false")])
+    .optional(),
 });
 
 export const idParamsSchema = z.object({

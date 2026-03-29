@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import ExcelJS from "exceljs";
+import { env } from "../config/env.js";
 import { prisma } from "../db/prisma.js";
 import { getOrSetCache } from "../utils/memoryCache.js";
 
@@ -75,7 +76,7 @@ const applyHeaderStyle = (worksheet: ExcelJS.Worksheet) => {
 const isRadiologyItem = (name: string) => /x ray|x-ray|xray|ultrasound|usg|sonography|scan/.test(name.toLowerCase());
 
 export const getDashboardSnapshot = async (date = dayjs().format("YYYY-MM-DD")) => {
-  return getOrSetCache(`dashboard:${date}`, 30_000, async () => {
+  return getOrSetCache(`dashboard:${date}`, env.dashboardCacheTtlMs, async () => {
     const start = dayjs(date).startOf("day").toDate();
     const end = dayjs(date).endOf("day").toDate();
 
@@ -97,7 +98,16 @@ export const getDashboardSnapshot = async (date = dayjs().format("YYYY-MM-DD")) 
       where: { createdAt: { gte: start, lte: end } },
       take: 5,
       orderBy: { createdAt: "desc" },
-      include: {
+      select: {
+        id: true,
+        invoiceNo: true,
+        total: true,
+        paidAmount: true,
+        dueAmount: true,
+        paymentStatus: true,
+        paymentMode: true,
+        invoiceType: true,
+        createdAt: true,
         patient: { select: { id: true, name: true, mrn: true } },
         doctor: { select: { id: true, name: true } },
       },
@@ -121,7 +131,7 @@ export const getDashboardSnapshot = async (date = dayjs().format("YYYY-MM-DD")) 
 export const getOperationalReports = async ({ date, fromDate, toDate }: ReportRangeInput = {}) => {
   const range = resolveDateRange({ date, fromDate, toDate });
 
-  return getOrSetCache(`reports:${range.fromDate}:${range.toDate}`, 30_000, async () => {
+  return getOrSetCache(`reports:${range.fromDate}:${range.toDate}`, env.dashboardCacheTtlMs, async () => {
     const { start, end, monthStart } = range;
 
     const [
@@ -157,8 +167,19 @@ export const getOperationalReports = async ({ date, fromDate, toDate }: ReportRa
       prisma.invoice.findMany({
         where: { createdAt: { gte: start, lte: end } },
         orderBy: { createdAt: "asc" },
-        include: {
-          items: true,
+        select: {
+          id: true,
+          invoiceNo: true,
+          createdAt: true,
+          patientId: true,
+          doctorId: true,
+          visitId: true,
+          invoiceType: true,
+          total: true,
+          paidAmount: true,
+          dueAmount: true,
+          paymentStatus: true,
+          paymentMode: true,
           patient: { select: { id: true, name: true, mrn: true } },
           doctor: { select: { id: true, name: true } },
           visit: {
@@ -172,6 +193,7 @@ export const getOperationalReports = async ({ date, fromDate, toDate }: ReportRa
     ]);
 
     const doctorIds = doctorWise.map((row: typeof doctorWise[number]) => row.doctorId);
+    const invoiceIds = invoices.map((invoice: typeof invoices[number]) => invoice.id);
     const doctors: DoctorSummary[] = doctorIds.length
       ? await prisma.user.findMany({
           where: { id: { in: doctorIds } },
@@ -182,8 +204,27 @@ export const getOperationalReports = async ({ date, fromDate, toDate }: ReportRa
           },
         }) as DoctorSummary[]
       : [];
+    const invoiceItems = invoiceIds.length
+      ? await prisma.invoiceItem.findMany({
+          where: { invoiceId: { in: invoiceIds } },
+          select: {
+            invoiceId: true,
+            category: true,
+            name: true,
+          },
+        })
+      : [];
 
     const doctorMap = new Map(doctors.map((doctor: DoctorSummary) => [doctor.id, doctor] as const));
+    const invoiceItemsByInvoiceId = invoiceItems.reduce(
+      (map: Map<number, Array<typeof invoiceItems[number]>>, item: typeof invoiceItems[number]) => {
+        const existing = map.get(item.invoiceId) ?? [];
+        existing.push(item);
+        map.set(item.invoiceId, existing);
+        return map;
+      },
+      new Map<number, Array<typeof invoiceItems[number]>>(),
+    );
     const doctorWisePayments = Array.from(
       invoices.reduce(
         (map: Map<number, DoctorWisePaymentSummary>, invoice: typeof invoices[number]) => {
@@ -216,9 +257,9 @@ export const getOperationalReports = async ({ date, fromDate, toDate }: ReportRa
 
     const collectionsMap = invoices.reduce(
       (map: Map<string, CollectionSummary>, invoice: typeof invoices[number]) => {
-        const invoiceItems = invoice.items ?? [];
-        const hasLabItems = invoiceItems.some((item: typeof invoiceItems[number]) => item.category === "LAB" && !isRadiologyItem(item.name));
-        const hasRadiologyItems = invoiceItems.some((item: typeof invoiceItems[number]) => isRadiologyItem(item.name));
+        const invoiceItemsForInvoice = invoiceItemsByInvoiceId.get(invoice.id) ?? [];
+        const hasLabItems = invoiceItemsForInvoice.some((item: typeof invoiceItemsForInvoice[number]) => item.category === "LAB" && !isRadiologyItem(item.name));
+        const hasRadiologyItems = invoiceItemsForInvoice.some((item: typeof invoiceItemsForInvoice[number]) => isRadiologyItem(item.name));
         const stream =
           invoice.invoiceType === "IPD" || invoice.visit?.type === "IPD"
             ? "IPD Collection"
